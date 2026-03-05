@@ -75,12 +75,7 @@ workflows:
     name: MedEvac iOS App
     max_build_duration: 60
     instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: MedEvac_ASC
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.medevac.app
       xcode: latest
       vars:
         BUNDLE_ID: com.medevac.app
@@ -110,12 +105,6 @@ workflows:
         script: |
           xcode-project use-profiles
 
-      - name: Increment build number
-        script: |
-          cd ios/MedEvac
-          LATEST_BUILD=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" || echo 0)
-          agvtool new-version -all $((LATEST_BUILD + 1))
-
       - name: Build iOS app
         script: |
           cd ios/MedEvac
@@ -138,8 +127,9 @@ workflows:
       - ios/MedEvac/build/MedEvac.xcarchive
 
     publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - Internal Testers
+      email:
+        recipients:
+          - b.alhaddad13@gmail.com
+        notify:
+          success: true
+          failure: true
