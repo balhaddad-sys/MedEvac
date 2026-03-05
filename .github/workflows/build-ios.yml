@@ -1,0 +1,201 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'MAK_Registry/**'
+      - 'ios/**'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Create Xcode project
+        run: |
+          mkdir -p ios/MedEvac/MedEvac
+
+          # Copy web assets
+          cp -r MAK_Registry/* ios/MedEvac/MedEvac/
+
+          # Create Info.plist
+          cat > ios/MedEvac/MedEvac/Info.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>ar</string>
+            <key>CFBundleDisplayName</key>
+            <string>MedEvac</string>
+            <key>CFBundleExecutable</key>
+            <string>MedEvac</string>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>$(PRODUCT_NAME)</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSRequiresIPhoneOS</key>
+            <true/>
+            <key>UILaunchStoryboardName</key>
+            <string>LaunchScreen</string>
+            <key>UIRequiredDeviceCapabilities</key>
+            <array>
+              <string>armv7</string>
+            </array>
+            <key>UISupportedInterfaceOrientations</key>
+            <array>
+              <string>UIInterfaceOrientationPortrait</string>
+            </array>
+          </dict>
+          </plist>
+          PLIST
+
+          # Create AppDelegate.swift
+          cat > ios/MedEvac/MedEvac/AppDelegate.swift << 'SWIFT'
+          import UIKit
+
+          @main
+          class AppDelegate: UIResponder, UIApplicationDelegate {
+              var window: UIWindow?
+
+              func application(_ application: UIApplication,
+                               didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+                  window = UIWindow(frame: UIScreen.main.bounds)
+                  window?.rootViewController = ViewController()
+                  window?.makeKeyAndVisible()
+                  return true
+              }
+          }
+          SWIFT
+
+          # Create ViewController.swift
+          cat > ios/MedEvac/MedEvac/ViewController.swift << 'SWIFT'
+          import UIKit
+          import WebKit
+
+          class ViewController: UIViewController, WKNavigationDelegate {
+              private var webView: WKWebView!
+
+              override func viewDidLoad() {
+                  super.viewDidLoad()
+
+                  let config = WKWebViewConfiguration()
+                  config.allowsInlineMediaPlayback = true
+
+                  webView = WKWebView(frame: view.bounds, configuration: config)
+                  webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                  webView.navigationDelegate = self
+                  webView.scrollView.bounces = false
+                  view.addSubview(webView)
+
+                  if let htmlPath = Bundle.main.path(forResource: "index", ofType: "html") {
+                      let htmlURL = URL(fileURLWithPath: htmlPath)
+                      webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+                  }
+              }
+
+              override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+          }
+          SWIFT
+
+          # Create LaunchScreen.storyboard
+          cat > ios/MedEvac/MedEvac/LaunchScreen.storyboard << 'STORYBOARD'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21701" targetRuntime="AppleSDK" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+              <scenes>
+                  <scene sceneID="EHf-IW-A2E">
+                      <objects>
+                          <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                              <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                                  <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                  <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                  <color key="backgroundColor" red="0.118" green="0.306" blue="0.847" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                  <subviews>
+                                      <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="MedEvac" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="lbl-1">
+                                          <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                          <fontDescription key="fontDescription" type="boldSystem" pointSize="28"/>
+                                      </label>
+                                  </subviews>
+                                  <constraints>
+                                      <constraint firstItem="lbl-1" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="cx"/>
+                                      <constraint firstItem="lbl-1" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="cy"/>
+                                  </constraints>
+                              </view>
+                          </viewController>
+                          <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                      </objects>
+                  </scene>
+              </scenes>
+          </document>
+          STORYBOARD
+
+      - name: Generate Xcode project with xcodegen
+        run: |
+          brew install xcodegen
+
+          cat > ios/MedEvac/project.yml << 'YML'
+          name: MedEvac
+          options:
+            bundleIdPrefix: com.medevac
+            deploymentTarget:
+              iOS: "15.0"
+          targets:
+            MedEvac:
+              type: application
+              platform: iOS
+              sources:
+                - MedEvac
+              settings:
+                base:
+                  PRODUCT_BUNDLE_IDENTIFIER: com.medevac.registry
+                  MARKETING_VERSION: "1.0"
+                  CURRENT_PROJECT_VERSION: 1
+                  DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+                  CODE_SIGN_IDENTITY: "Apple Development"
+                  CODE_SIGN_STYLE: Automatic
+              resources:
+                - path: MedEvac/index.html
+                - path: MedEvac/sw.js
+                - path: MedEvac/manifest.json
+                - path: MedEvac/icon-192.png
+                - path: MedEvac/icon-512.png
+          YML
+
+          cd ios/MedEvac
+          xcodegen generate
+
+      - name: Build iOS app (unsigned)
+        run: |
+          cd ios/MedEvac
+          xcodebuild build \
+            -project MedEvac.xcodeproj \
+            -scheme MedEvac \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: medevac-ios
+          path: ios/MedEvac/build/Build/Products/Release-iphonesimulator/MedEvac.app
+          retention-days: 30
