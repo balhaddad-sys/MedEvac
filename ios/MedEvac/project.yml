@@ -1,0 +1,48 @@
+name: MedEvac
+options:
+  bundleIdPrefix: com.medevac
+  deploymentTarget:
+    iOS: "15.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+
+targets:
+  MedEvac:
+    type: application
+    platform: iOS
+    sources:
+      - path: MedEvac
+        excludes:
+          - "*.html"
+          - "*.js"
+          - "*.json"
+          - "*.png"
+          - "*.rules.json"
+    resources:
+      - path: MedEvac/index.html
+      - path: MedEvac/sw.js
+      - path: MedEvac/manifest.json
+      - path: MedEvac/icon-192.png
+      - path: MedEvac/icon-512.png
+      - path: MedEvac/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.medevac.app
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_FILE: MedEvac/Info.plist
+        DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+        CODE_SIGN_IDENTITY: "Apple Distribution"
+        CODE_SIGN_STYLE: Manual
+        PROVISIONING_PROFILE_SPECIFIER: ""
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+      configs:
+        Debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+        Release:
+          CODE_SIGN_IDENTITY: "Apple Distribution"

@@ -11,6 +11,8 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
+    env:
+      DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -19,141 +21,51 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Create Xcode project
+      - name: Copy web assets into iOS project
         run: |
-          mkdir -p ios/MedEvac/MedEvac
+          cp MAK_Registry/index.html ios/MedEvac/MedEvac/
+          cp MAK_Registry/sw.js ios/MedEvac/MedEvac/
+          cp MAK_Registry/manifest.json ios/MedEvac/MedEvac/
+          cp MAK_Registry/icon-192.png ios/MedEvac/MedEvac/
+          cp MAK_Registry/icon-512.png ios/MedEvac/MedEvac/
 
-          # Copy web assets
-          cp -r MAK_Registry/* ios/MedEvac/MedEvac/
+      - name: Install XcodeGen
+        run: brew install xcodegen
 
-          # Create Info.plist (using UILaunchScreen instead of storyboard)
-          cat > ios/MedEvac/MedEvac/Info.plist << 'PLIST'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleDevelopmentRegion</key>
-            <string>ar</string>
-            <key>CFBundleDisplayName</key>
-            <string>MedEvac</string>
-            <key>CFBundleExecutable</key>
-            <string>MedEvac</string>
-            <key>CFBundleIdentifier</key>
-            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-            <key>CFBundleInfoDictionaryVersion</key>
-            <string>6.0</string>
-            <key>CFBundleName</key>
-            <string>$(PRODUCT_NAME)</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleShortVersionString</key>
-            <string>1.0</string>
-            <key>CFBundleVersion</key>
-            <string>1</string>
-            <key>LSRequiresIPhoneOS</key>
-            <true/>
-            <key>UILaunchScreen</key>
-            <dict>
-              <key>UIColorName</key>
-              <string>launchBg</string>
-            </dict>
-            <key>UIRequiredDeviceCapabilities</key>
-            <array>
-              <string>armv7</string>
-            </array>
-            <key>UISupportedInterfaceOrientations</key>
-            <array>
-              <string>UIInterfaceOrientationPortrait</string>
-            </array>
-          </dict>
-          </plist>
-          PLIST
-
-          # Create AppDelegate.swift
-          cat > ios/MedEvac/MedEvac/AppDelegate.swift << 'SWIFT'
-          import UIKit
-
-          @main
-          class AppDelegate: UIResponder, UIApplicationDelegate {
-              var window: UIWindow?
-
-              func application(_ application: UIApplication,
-                               didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-                  window = UIWindow(frame: UIScreen.main.bounds)
-                  window?.rootViewController = ViewController()
-                  window?.makeKeyAndVisible()
-                  return true
-              }
-          }
-          SWIFT
-
-          # Create ViewController.swift
-          cat > ios/MedEvac/MedEvac/ViewController.swift << 'SWIFT'
-          import UIKit
-          import WebKit
-
-          class ViewController: UIViewController, WKNavigationDelegate {
-              private var webView: WKWebView!
-
-              override func viewDidLoad() {
-                  super.viewDidLoad()
-                  view.backgroundColor = UIColor(red: 0.118, green: 0.306, blue: 0.847, alpha: 1.0)
-
-                  let config = WKWebViewConfiguration()
-                  config.allowsInlineMediaPlayback = true
-
-                  webView = WKWebView(frame: view.bounds, configuration: config)
-                  webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                  webView.navigationDelegate = self
-                  webView.scrollView.bounces = false
-                  view.addSubview(webView)
-
-                  if let htmlPath = Bundle.main.path(forResource: "index", ofType: "html") {
-                      let htmlURL = URL(fileURLWithPath: htmlPath)
-                      webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
-                  }
-              }
-
-              override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
-          }
-          SWIFT
-
-      - name: Generate Xcode project with xcodegen
+      - name: Generate Xcode project
         run: |
-          brew install xcodegen
-
-          cat > ios/MedEvac/project.yml << 'YML'
-          name: MedEvac
-          options:
-            bundleIdPrefix: com.medevac
-            deploymentTarget:
-              iOS: "15.0"
-          targets:
-            MedEvac:
-              type: application
-              platform: iOS
-              sources:
-                - MedEvac
-              settings:
-                base:
-                  PRODUCT_BUNDLE_IDENTIFIER: com.medevac.registry
-                  MARKETING_VERSION: "1.0"
-                  CURRENT_PROJECT_VERSION: 1
-                  DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
-                  CODE_SIGN_IDENTITY: "Apple Development"
-                  CODE_SIGN_STYLE: Automatic
-              resources:
-                - path: MedEvac/index.html
-                - path: MedEvac/sw.js
-                - path: MedEvac/manifest.json
-                - path: MedEvac/icon-192.png
-                - path: MedEvac/icon-512.png
-          YML
-
           cd ios/MedEvac
           xcodegen generate
 
-      - name: Build iOS app (unsigned)
+      - name: Install Apple certificate and provisioning profile
+        if: ${{ env.HAS_SIGNING == 'true' }}
+        env:
+          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          security import $CERTIFICATE_PATH -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Build unsigned (simulator)
+        if: ${{ env.HAS_SIGNING != 'true' }}
+        env:
+          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
         run: |
           cd ios/MedEvac
           xcodebuild build \
@@ -166,9 +78,63 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Upload iOS build artifact
+      - name: Archive signed IPA
+        if: ${{ env.HAS_SIGNING == 'true' }}
+        env:
+          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        run: |
+          cd ios/MedEvac
+          xcodebuild archive \
+            -project MedEvac.xcodeproj \
+            -scheme MedEvac \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath build/MedEvac.xcarchive \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
+
+          xcodebuild -exportArchive \
+            -archivePath build/MedEvac.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/export
+
+      - name: Upload to TestFlight
+        if: ${{ env.HAS_API_KEY == 'true' }}
+        env:
+          HAS_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 != '' }}
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          API_KEY_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo -n "$API_KEY_BASE64" | base64 --decode -o ~/private_keys/AuthKey_${API_KEY_ID}.p8
+
+          xcrun altool --upload-app \
+            -f ios/MedEvac/build/export/MedEvac.ipa \
+            -t ios \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_KEY_ISSUER"
+
+      - name: Upload simulator build
+        if: ${{ env.HAS_SIGNING != 'true' }}
+        env:
+          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: medevac-ios
+          name: medevac-ios-simulator
           path: ios/MedEvac/build/Build/Products/Release-iphonesimulator/MedEvac.app
           retention-days: 30
+
+      - name: Upload signed IPA
+        if: ${{ env.HAS_SIGNING == 'true' }}
+        env:
+          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: medevac-ios-ipa
+          path: ios/MedEvac/build/export/MedEvac.ipa
+          retention-days: 30
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
