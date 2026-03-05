@@ -148,8 +148,11 @@ workflows:
       - name: Export IPA
         script: |
           cd ios/MedEvac
-          xcode-project build-ipa \
-            --archive-path build/MedEvac.xcarchive
+          xcodebuild -exportArchive \
+            -archivePath build/MedEvac.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist /Users/builder/export_options.plist
+          cp build/export/*.ipa build/ || true
 
     artifacts:
       - ios/MedEvac/build/*.ipa
