@@ -104,10 +104,17 @@ workflows:
         script: |
           cd ios/MedEvac/MedEvac
           ICON_DIR=Assets.xcassets/AppIcon.appiconset
-          sips -z 1024 1024 icon-512.png --out $ICON_DIR/icon-1024.png
-          sips -z 76 76 icon-512.png --out $ICON_DIR/icon-76.png
-          sips -z 152 152 icon-512.png --out $ICON_DIR/icon-152.png
-          sips -z 167 167 icon-512.png --out $ICON_DIR/icon-167.png
+          # First create a flattened (no alpha) version of the source icon
+          # by compositing onto a white background
+          sips -s format png icon-512.png --out /tmp/src_icon.png
+          # Remove alpha channel by converting to jpg and back
+          sips -s format jpeg /tmp/src_icon.png --out /tmp/icon_flat.jpg
+          sips -s format png /tmp/icon_flat.jpg --out /tmp/icon_flat.png
+          # Generate all required sizes from the flattened icon
+          sips -z 1024 1024 /tmp/icon_flat.png --out $ICON_DIR/icon-1024.png
+          sips -z 76 76 /tmp/icon_flat.png --out $ICON_DIR/icon-76.png
+          sips -z 152 152 /tmp/icon_flat.png --out $ICON_DIR/icon-152.png
+          sips -z 167 167 /tmp/icon_flat.png --out $ICON_DIR/icon-167.png
 
       - name: Generate Xcode project
         script: |
