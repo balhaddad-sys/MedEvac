@@ -103,8 +103,11 @@ workflows:
       - name: Generate app icons
         script: |
           cd ios/MedEvac/MedEvac
-          # Generate 1024x1024 icon from 512
-          sips -z 1024 1024 icon-512.png --out Assets.xcassets/AppIcon.appiconset/icon-1024.png
+          ICON_DIR=Assets.xcassets/AppIcon.appiconset
+          sips -z 1024 1024 icon-512.png --out $ICON_DIR/icon-1024.png
+          sips -z 76 76 icon-512.png --out $ICON_DIR/icon-76.png
+          sips -z 152 152 icon-512.png --out $ICON_DIR/icon-152.png
+          sips -z 167 167 icon-512.png --out $ICON_DIR/icon-167.png
 
       - name: Generate Xcode project
         script: |
