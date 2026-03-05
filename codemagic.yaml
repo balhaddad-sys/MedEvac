@@ -114,6 +114,18 @@ workflows:
           cd ios/MedEvac
           xcodegen generate
 
+      - name: Debug - verify icons and plist
+        script: |
+          echo "=== Icon files ==="
+          ls -la ios/MedEvac/MedEvac/Assets.xcassets/AppIcon.appiconset/
+          echo "=== Contents.json ==="
+          cat ios/MedEvac/MedEvac/Assets.xcassets/AppIcon.appiconset/Contents.json
+          echo "=== Generated Info.plist ==="
+          cat ios/MedEvac/MedEvac/Info.plist
+          echo "=== INFOPLIST_FILE build setting ==="
+          cd ios/MedEvac
+          xcodebuild -project MedEvac.xcodeproj -scheme MedEvac -showBuildSettings 2>/dev/null | grep -i "INFOPLIST\|ICON\|GENERATE" || true
+
       - name: Fetch signing files via API
         script: |
           # Generate RSA key for certificate signing

@@ -28,6 +28,29 @@ targets:
       - path: MedEvac/icon-192.png
       - path: MedEvac/icon-512.png
       - path: MedEvac/Assets.xcassets
+    info:
+      path: MedEvac/Info.plist
+      properties:
+        CFBundleIconName: AppIcon
+        ITSAppUsesNonExemptEncryption: false
+        LSApplicationCategoryType: public.app-category.medical
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+          NSAllowsArbitraryLoadsInWebContent: true
+        UILaunchScreen:
+          UIColorName: LaunchBg
+        LSRequiresIPhoneOS: true
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UIViewControllerBasedStatusBarAppearance: true
+        UIRequiredDeviceCapabilities:
+          - armv7
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.medevac.app
@@ -39,4 +62,3 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
-        INFOPLIST_FILE: MedEvac/Info.plist
