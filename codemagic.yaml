@@ -154,6 +154,14 @@ workflows:
             -exportOptionsPlist /Users/builder/export_options.plist
           cp build/export/*.ipa build/ || true
 
+      - name: Upload to TestFlight
+        script: |
+          app-store-connect publish \
+            --path ios/MedEvac/build/MedEvac.ipa \
+            --key-id "$APP_STORE_CONNECT_KEY_ID" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY
+
     artifacts:
       - ios/MedEvac/build/*.ipa
 
