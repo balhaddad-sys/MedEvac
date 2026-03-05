@@ -107,10 +107,8 @@ workflows:
 
       - name: Fetch signing files via API
         script: |
-          # Write API key to file (handle missing newlines)
-          printf '%s\n' "$APP_STORE_CONNECT_PRIVATE_KEY" > /tmp/AuthKey.p8
-          # Ensure proper PEM format
-          cat /tmp/AuthKey.p8 | head -1
+          # Generate RSA key for certificate signing
+          openssl genrsa -out /tmp/cert_key.pem 2048
 
           # Fetch certificate + provisioning profile from Apple
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
@@ -119,6 +117,7 @@ workflows:
             --key-id "$APP_STORE_CONNECT_KEY_ID" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY \
+            --certificate-key @file:/tmp/cert_key.pem \
             --create
 
           # Initialize keychain and install certs
