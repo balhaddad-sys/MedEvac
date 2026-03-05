@@ -28,7 +28,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Bubblewrap CLI
-        run: npm install -g @nicolo-ribaudo/bubblewrap
+        run: npm install -g @bubblewrap/cli
 
       - name: Initialize TWA project
         run: |

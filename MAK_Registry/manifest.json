@@ -1,7 +1,7 @@
 {
-  "name": "MAK Patient Registry",
-  "short_name": "MAK Registry",
-  "description": "Mubarak Al-Kabeer Hospital Patient Registry",
+  "name": "MedEvac",
+  "short_name": "MedEvac",
+  "description": "MedEvac - Mubarak Al-Kabeer Hospital Patient Registry",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
