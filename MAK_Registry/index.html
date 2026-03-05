@@ -317,8 +317,10 @@ function listenUnit(uid) {
   S.unit = uid;
   onValue(ref(db,`patients/${uid}`), snap => {
     const d = snap.val()||{};
+    const wasEmpty = S.patients.length === 0;
     S.patients = Object.entries(d).map(([k,v])=>({...v,_k:k}));
     if (S.screen==="ward") render();
+    if (wasEmpty && S.patients.length > 0 && uid.startsWith("E")) emergencyBackupPNG();
   });
 }
 
@@ -396,6 +398,83 @@ function codePicker(selCode, prefix) {
       <div class="cn">${c}</div><div class="cl">${ccfg(c).label}</div>
     </div>`).join("")}
   </div>`;
+}
+
+// ── EMERGENCY BACKUP PNG ─────────────────────────────────────────────
+let _lastBackupUrl = null;
+function emergencyBackupPNG() {
+  if (!S.unit || !S.unit.startsWith("E")) return;
+  const patients = [...S.patients].sort((a,b) => b.code - a.code);
+  if (!patients.length) return;
+
+  const cols = ["#","الاسم","المدني","الجنسية","الجناح","الكود","ملاحظات"];
+  const rows = patients.map((p,i) => [
+    String(i+1), p.name||"", p.civil||"", p.nat||"", p.ward||"", String(p.code||""), p.notes||""
+  ]);
+
+  const cv = document.createElement("canvas");
+  const ctx = cv.getContext("2d");
+  const fs = 14, pad = 10, rowH = fs + pad * 2, hdrH = rowH + 4;
+  const colW = [40, 180, 100, 80, 80, 50, 160];
+  const totalW = colW.reduce((a,b) => a+b, 0) + 20;
+  const titleH = 50;
+  const totalH = titleH + hdrH + rows.length * rowH + 20;
+  cv.width = totalW; cv.height = totalH;
+
+  // background
+  ctx.fillStyle = "#0a0f1e"; ctx.fillRect(0, 0, totalW, totalH);
+
+  // title
+  ctx.fillStyle = "#60a5fa"; ctx.font = `bold 18px Inter, sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  const isF = S.unit.endsWith("_F");
+  const unitLabel = `وحدة E — ${isF ? "إناث" : "ذكور"}`;
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+  ctx.fillText(unitLabel, totalW - 10, 20);
+  ctx.fillStyle = "#94a3b8"; ctx.font = `12px Inter, sans-serif`;
+  ctx.fillText(dateStr, totalW - 10, 40);
+
+  let y = titleH;
+  const codeColors = {1:"#10b981",2:"#f59e0b",3:"#ef4444",4:"#ef4444"};
+
+  // header
+  ctx.fillStyle = "#1e293b"; ctx.fillRect(10, y, totalW - 20, hdrH);
+  ctx.fillStyle = "#93c5fd"; ctx.font = `bold ${fs}px Inter, sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  let x = totalW - 10;
+  cols.forEach((c, i) => { ctx.fillText(c, x - 4, y + hdrH/2); x -= colW[i]; });
+  y += hdrH;
+
+  // rows
+  rows.forEach((row, ri) => {
+    ctx.fillStyle = ri % 2 === 0 ? "#0f172a" : "#131a2e";
+    ctx.fillRect(10, y, totalW - 20, rowH);
+    ctx.font = `${fs}px Inter, sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    x = totalW - 10;
+    row.forEach((cell, ci) => {
+      if (ci === 5) ctx.fillStyle = codeColors[Number(cell)] || "#e2e8f0";
+      else ctx.fillStyle = "#e2e8f0";
+      const maxW = colW[ci] - 8;
+      let txt = cell;
+      while (ctx.measureText(txt).width > maxW && txt.length > 1) txt = txt.slice(0, -1) + "…";
+      ctx.fillText(txt, x - 4, y + rowH/2);
+      x -= colW[ci];
+    });
+    y += rowH;
+  });
+
+  cv.toBlob(blob => {
+    if (!blob) return;
+    // revoke previous backup URL
+    if (_lastBackupUrl) URL.revokeObjectURL(_lastBackupUrl);
+    const url = URL.createObjectURL(blob);
+    _lastBackupUrl = url;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `MedEvac_UnitE_${S.unit.endsWith("_F")?"F":"M"}_${dateStr.replace(/[: ]/g,"_")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, "image/png");
 }
 
 // ── RENDER ROUTER ────────────────────────────────────────────────────
