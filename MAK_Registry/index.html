@@ -320,7 +320,7 @@ function listenUnit(uid) {
     const wasEmpty = S.patients.length === 0;
     S.patients = Object.entries(d).map(([k,v])=>({...v,_k:k}));
     if (S.screen==="ward") render();
-    if (wasEmpty && S.patients.length > 0 && uid.startsWith("E")) emergencyBackupPNG();
+    if (wasEmpty && S.patients.length > 0) emergencyBackupPNG();
   });
 }
 
@@ -403,7 +403,7 @@ function codePicker(selCode, prefix) {
 // ── EMERGENCY BACKUP PNG ─────────────────────────────────────────────
 let _lastBackupUrl = null;
 function emergencyBackupPNG() {
-  if (!S.unit || !S.unit.startsWith("E")) return;
+  if (!S.unit) return;
   const patients = [...S.patients].sort((a,b) => b.code - a.code);
   if (!patients.length) return;
 
@@ -427,7 +427,7 @@ function emergencyBackupPNG() {
   // title
   ctx.fillStyle = "#60a5fa"; ctx.font = `bold 18px Inter, sans-serif`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   const isF = S.unit.endsWith("_F");
-  const unitLabel = `وحدة E — ${isF ? "إناث" : "ذكور"}`;
+  const unitLabel = `وحدة ${S.unit[0]} — ${isF ? "إناث" : "ذكور"}`;
   const now = new Date();
   const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
   ctx.fillText(unitLabel, totalW - 10, 20);
@@ -470,7 +470,7 @@ function emergencyBackupPNG() {
     _lastBackupUrl = url;
     const a = document.createElement("a");
     a.href = url;
-    a.download = `MedEvac_UnitE_${S.unit.endsWith("_F")?"F":"M"}_${dateStr.replace(/[: ]/g,"_")}.png`;
+    a.download = `MedEvac_Unit${S.unit[0]}_${S.unit.endsWith("_F")?"F":"M"}_${dateStr.replace(/[: ]/g,"_")}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
