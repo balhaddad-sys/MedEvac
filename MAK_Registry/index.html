@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MAK Registry">
+<meta name="theme-color" content="#1d4ed8">
+<link rel="manifest" href="manifest.json">
+<title>MAK Patient Registry</title>
+<style>
+:root{
+  --blue:#1d4ed8;--blue2:#2563eb;--blue3:#3b82f6;--bluel:#dbeafe;--bluell:#eff6ff;
+  --bg:#f0f6ff;--card:#fff;--text:#1e3a5f;--muted:#64748b;--border:#bfdbfe;
+  --g:#16a34a;--gbg:#f0fdf4;--gb:#bbf7d0;
+  --y:#d97706;--ybg:#fffbeb;--yb:#fde68a;
+  --r:#dc2626;--rbg:#fff1f2;--rb:#fecaca;
+  --rad:14px;--shadow:0 2px 12px rgba(29,78,216,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Arial,sans-serif;direction:rtl;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%;height:100dvh;max-width:480px;margin:0 auto;background:var(--bg);position:relative}
+.screen{display:flex;flex-direction:column;height:100%;animation:fi .2s ease both}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* HDR */
+.hdr{background:linear-gradient(135deg,#1e40af,#2563eb);padding:max(14px,env(safe-area-inset-top)) 16px 14px;
+  color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  box-shadow:0 3px 16px rgba(29,78,216,.3)}
+.htitle{font-size:18px;font-weight:900;letter-spacing:-.3px}
+.hsub{font-size:11px;opacity:.75;margin-top:2px}
+.hright{display:flex;gap:8px;align-items:center}
+.ibtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:10px;
+  width:38px;height:38px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.ibtn:active{background:rgba(255,255,255,.3)}
+.opill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25)}
+.opill.on{color:#86efac}.opill.off{color:#fca5a5}
+.odot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.odot.p{animation:pdot 2s infinite}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0}
+.stat{padding:10px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;transition:background .15s}
+.stat:last-child{border-left:none}
+.stat.act,.stat:active{background:var(--bluell)}
+.sn{font-size:22px;font-weight:900;line-height:1}
+.sl{font-size:10px;color:var(--muted);margin-top:2px}
+.st .sn{color:var(--blue)}.sg .sn{color:var(--g)}.sy .sn{color:var(--y)}.sr .sn{color:var(--r)}
+
+/* TOOLBAR */
+.toolbar{padding:10px 12px;display:flex;gap:8px;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--border)}
+.si{flex:1;background:var(--bluell);border:1px solid var(--bluel);border-radius:10px;padding:9px 14px;
+  color:var(--text);font-family:inherit;font-size:14px;direction:rtl;outline:none;transition:border-color .2s}
+.si:focus{border-color:var(--blue3);background:#fff}
+.si::placeholder{color:var(--muted)}
+
+/* PATIENT CARD */
+.pc{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:13px 14px;
+  display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;
+  transition:all .15s;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.pc:active{transform:scale(.98);background:var(--bluell)}
+.pstripe{position:absolute;right:0;top:0;bottom:0;width:4px;border-radius:0 var(--rad) var(--rad) 0}
+.pbadge{width:50px;height:50px;border-radius:12px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;flex-shrink:0;border:2px solid}
+.pn{font-size:14px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pm{display:flex;gap:5px;flex-wrap:wrap}
+.chip{font-size:11px;color:var(--muted);background:var(--bluell);border:1px solid var(--bluel);border-radius:6px;padding:2px 7px}
+.pw{font-size:13px;font-weight:800;color:var(--blue);flex-shrink:0}
+.c1 .pstripe{background:var(--g)}.c1 .pbadge{color:var(--g);background:var(--gbg);border-color:var(--gb)}
+.c2 .pstripe{background:var(--y)}.c2 .pbadge{color:var(--y);background:var(--ybg);border-color:var(--yb)}
+.c3 .pstripe,.c4 .pstripe{background:var(--r)}.c3 .pbadge,.c4 .pbadge{color:var(--r);background:var(--rbg);border-color:var(--rb)}
+
+/* FORMS */
+.fg{margin-bottom:14px}
+.fl{font-size:12px;color:var(--muted);display:block;margin-bottom:6px;font-weight:600}
+.fi{width:100%;background:var(--bluell);border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;color:var(--text);font-family:inherit;font-size:15px;direction:rtl;outline:none;transition:all .2s}
+.fi:focus{border-color:var(--blue3);background:#fff}
+.fi::placeholder{color:var(--muted)}
+.cpick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.co{border:2px solid var(--border);border-radius:12px;padding:10px 4px;text-align:center;
+  cursor:pointer;background:var(--bluell);transition:all .15s}
+.co:active{transform:scale(.94)}
+.co .cn{font-size:22px;font-weight:900;color:var(--muted)}
+.co .cl{font-size:10px;color:var(--muted);margin-top:2px}
+.co.s1{border-color:var(--gb);background:var(--gbg)}.co.s1 .cn{color:var(--g)}.co.s1 .cl{color:var(--g)}
+.co.s2{border-color:var(--yb);background:var(--ybg)}.co.s2 .cn{color:var(--y)}.co.s2 .cl{color:var(--y)}
+.co.s3,.co.s4{border-color:var(--rb);background:var(--rbg)}.co.s3 .cn,.co.s4 .cn{color:var(--r)}.co.s3 .cl,.co.s4 .cl{color:var(--r)}
+
+/* BUTTONS */
+.btn{width:100%;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;
+  border-radius:12px;padding:14px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 14px rgba(29,78,216,.3);transition:opacity .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{opacity:.8}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-g{background:var(--bluell);color:var(--blue);border:1px solid var(--bluel);box-shadow:none}
+.btn-d{background:var(--rbg);color:var(--r);border:1px solid var(--rb);box-shadow:none;padding:14px 18px;width:auto}
+
+/* PIN */
+.pdisplay{display:flex;gap:14px;justify-content:center;margin:28px 0 24px}
+.pdot2{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--blue);background:transparent;transition:all .2s}
+.pdot2.f{background:var(--blue);transform:scale(1.1)}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:280px;margin:0 auto}
+.pkey{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;
+  text-align:center;font-size:24px;font-weight:700;cursor:pointer;transition:all .15s;
+  box-shadow:var(--shadow);color:var(--text);font-family:inherit}
+.pkey:active{background:var(--bluel);transform:scale(.94)}
+.pkey.del{font-size:16px;color:var(--muted)}
+
+/* UNIT CARDS */
+.uhdr{background:linear-gradient(135deg,#1e40af,#2563eb);padding:10px 14px;color:#fff;font-weight:900;font-size:15px;
+  display:flex;justify-content:space-between;align-items:center}
+.ucard{background:var(--card);border:2px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px}
+.uwrap{display:grid;grid-template-columns:1fr 1fr}
+.ubtn{padding:20px 12px;text-align:center;cursor:pointer;transition:all .15s;border:none;background:transparent}
+.ubtn:active{background:var(--bluell)}
+.ubtn.male{border-left:1px solid var(--border)}
+.uico{font-size:28px;margin-bottom:8px}
+.uname{font-size:14px;font-weight:900;color:var(--text)}
+.ucnt{display:inline-block;margin-top:8px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.male .ucnt{background:var(--bluel);color:var(--blue)}
+.female .ucnt{background:#fce7f3;color:#be185d}
+
+/* LIST */
+.slist{flex:1;overflow-y:auto;padding:10px 12px 100px;-webkit-overflow-scrolling:touch}
+.slist::-webkit-scrollbar{display:none}
+.sp{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sp::-webkit-scrollbar{display:none}
+
+/* INFO ROW */
+.ir{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.ir:last-child{border-bottom:none;margin-bottom:8px}
+.ik{color:var(--muted)}.iv{font-weight:700}
+
+/* OCR */
+.ocr-zone{border:2px dashed var(--bluel);border-radius:16px;padding:32px 20px;text-align:center;
+  cursor:pointer;transition:all .2s;background:var(--bluell)}
+.ocr-zone:hover{border-color:var(--blue3)}
+.orow{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+  margin-bottom:8px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
+.ochk{width:24px;height:24px;border-radius:7px;border:2px solid var(--blue);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all .15s}
+.ochk.on{background:var(--blue)}
+
+/* LOADER */
+.loader{width:32px;height:32px;border:3px solid var(--bluel);border-top-color:var(--blue);
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(80px);
+  padding:11px 24px;border-radius:30px;font-size:14px;font-weight:700;z-index:1000;
+  white-space:nowrap;box-shadow:0 6px 24px rgba(0,0,0,.15);transition:transform .3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--g);color:#fff}.toast.err{background:var(--r);color:#fff}.toast.warn{background:var(--y);color:#000}
+
+/* OFFLINE */
+.offbar{background:var(--rbg);border-bottom:1px solid var(--rb);color:var(--r);
+  text-align:center;font-size:12px;font-weight:700;padding:6px;flex-shrink:0;display:none}
+.offbar.show{display:block}
+
+/* ADMIN TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card)}
+.tab{flex:1;padding:12px 4px;text-align:center;font-size:13px;font-weight:700;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab.act{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* INSTALL BANNER */
+.ibanner{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;
+  background:linear-gradient(135deg,#1e40af,#2563eb);border-top:1px solid rgba(255,255,255,.2);
+  padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:12px;z-index:200;
+  transform:translateY(100%);transition:transform .4s cubic-bezier(.33,1,.68,1)}
+.ibanner.show{transform:translateY(0)}
+.ibanner-text strong{display:block;font-size:14px;font-weight:900;color:#fff}
+.ibanner-text span{font-size:12px;color:#bfdbfe}
+.ibanner-btn{background:#fff;color:var(--blue);border:none;border-radius:10px;
+  padding:10px 16px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.ibanner-x{background:none;border:none;color:rgba(255,255,255,.6);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div id="app"><div class="screen" style="align-items:center;justify-content:center"><div class="loader"></div></div></div>
+<div class="toast" id="toast"></div>
+<div class="ibanner" id="ibanner">
+  <div style="font-size:26px">📲</div>
+  <div class="ibanner-text" style="flex:1">
+    <strong>تثبيت التطبيق</strong>
+    <span>أضفه للشاشة الرئيسية للوصول الفوري</span>
+  </div>
+  <button class="ibanner-btn" id="ibanner-btn">تثبيت</button>
+  <button class="ibanner-x" onclick="dismissInstall()">✕</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, onValue, set, push, remove, get, off }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const FB = {
+  apiKey:"AIzaSyBuuSFWmjkDPiF-LNlZkjVcMDPK9sHyYEQ",
+  authDomain:"unit-e-1d07b.firebaseapp.com",
+  databaseURL:"https://unit-e-1d07b-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"unit-e-1d07b",
+  storageBucket:"unit-e-1d07b.firebasestorage.app",
+  messagingSenderId:"465930916288",
+  appId:"1:465930916258:web:89210233e6ba1004d262fb"
+};
+const GEMINI = "AIzaSyB77AmYjvIqPFNQZhzA7vtfspk_0MOHAnk";
+const db = getDatabase(initializeApp(FB));
+
+// ── PINS ────────────────────────────────────────────────────────────
+const DEFAULT_PINS = {
+  A_M:"1111",A_F:"1112",B_M:"2221",B_F:"2222",
+  C_M:"3331",C_F:"3332",D_M:"4441",D_F:"4442",
+  E_M:"5551",E_F:"5552",ADMIN:"0000"
+};
+
+const CODE_CFG = {
+  1:{color:"var(--g)",  bg:"var(--gbg)",label:"أخضر",   cls:"s1"},
+  2:{color:"var(--y)",  bg:"var(--ybg)",label:"أصفر",   cls:"s2"},
+  3:{color:"var(--r)",  bg:"var(--rbg)",label:"أحمر",   cls:"s3"},
+  4:{color:"var(--r)",  bg:"var(--rbg)",label:"حرج",    cls:"s4"},
+};
+
+const SEED_E_M = [
+  {name:"خالد محمد أحمد الدنون",civil:"264100700097",nat:"أردني",ward:"W14",code:4,notes:""},
+  {name:"عبدالله محمود عبدالخالق النجار",civil:"233041500113",nat:"كويتي",ward:"W15",code:3,notes:""},
+  {name:"نواف نسيم عبدالله بوناشي",civil:"286122601564",nat:"كويتي",ward:"W20",code:4,notes:""},
+  {name:"حسين معرفى صفر معرفى",civil:"240092800373",nat:"كويتي",ward:"W19R3",code:2,notes:""},
+  {name:"عبدالله مبارك عبود الدقيل",civil:"250022400111",nat:"يمني",ward:"W19R15-1",code:4,notes:""},
+  {name:"عبداللطيف ابراهيم حمد السريع",civil:"253051701152",nat:"كويتي",ward:"W19R1",code:2,notes:""},
+  {name:"محمد شفيع محمد رمضان",civil:"256030300572",nat:"باكستاني",ward:"W20R20-1",code:2,notes:""},
+  {name:"روجليو نافاتا بانزون",civil:"269102703796",nat:"فلبيني",ward:"W20R12-2",code:4,notes:""},
+  {name:"انتوني اوين بارتليت",civil:"261091802732",nat:"بريطاني",ward:"W21R20-1",code:2,notes:""},
+  {name:"عبدالمحسن إبراهيم عبدالرحمن",civil:"289012801294",nat:"كويتي",ward:"W21R8",code:2,notes:""},
+  {name:"راجو البياي سادهو سوندار",civil:"266112301981",nat:"هندي",ward:"W21R14-2",code:2,notes:""},
+  {name:"أسامة محمد صالح عثمان",civil:"272031402984",nat:"مصري",ward:"W22R17-1",code:1,notes:""},
+  {name:"حيدر عوض حيدر حسين",civil:"244100400184",nat:"كويتي",ward:"W22R5",code:2,notes:""},
+  {name:"هاركا مان تومباو",civil:"285022603058",nat:"نيبالي",ward:"W22R14-2",code:2,notes:""},
+  {name:"عبدالله محمد عبدالعزيز",civil:"311012800951",nat:"مصري",ward:"W27R16-1",code:2,notes:""},
+  {name:"اسحاق امين عبدالرحمن",civil:"248021600223",nat:"كويتي",ward:"W27R6",code:4,notes:""},
+  {name:"عادل عبدالنعيم بحر على سلوم",civil:"257082601005",nat:"مصري",ward:"W5R14-4",code:4,notes:""},
+  {name:"زهير محمد داما",civil:"273101009139",nat:"سوري",ward:"W5R15-1",code:2,notes:""},
+];
+const SEED_E_F = [
+  {name:"فوزية عبدالوهاب خلف",civil:"252072701341",nat:"كويتية",ward:"W25R15-1",code:2,notes:""},
+  {name:"فاطمة سعيد عبدالله",civil:"243020600288",nat:"يمنية",ward:"W25R16-2",code:3,notes:""},
+  {name:"وفاء عبدالجليل علي",civil:"259091300342",nat:"مصرية",ward:"W25R11-1",code:4,notes:""},
+  {name:"سميرة بلال سلطان",civil:"252082701089",nat:"غير مبين",ward:"W25R14-1",code:2,notes:""},
+  {name:"طيبه ابراهيم خالد",civil:"242030200662",nat:"كويتية",ward:"W25R3",code:3,notes:""},
+  {name:"خيرية علي جبر",civil:"240110900301",nat:"غير مبين",ward:"W23R14-2",code:3,notes:""},
+  {name:"سناء احمد ابوزيد",civil:"259061700134",nat:"مصرية",ward:"W24R19-2",code:2,notes:""},
+];
+
+// ── STATE ────────────────────────────────────────────────────────────
+let S = {
+  screen:"home", unit:null, unitLabel:"",
+  patients:[], allData:{}, pins:{...DEFAULT_PINS},
+  filter:"all", search:"", online:navigator.onLine,
+  editP:null, editCode:null, editWard:"", editNotes:"",
+  addCode:null,
+  pinTarget:null, pinVal:"",
+  ocrImg:null, ocrB64:null, ocrResults:[], ocrSel:[], ocrLoading:false,
+  adminTab:"overview",
+  unsub:null,
+};
+
+// ── FIREBASE HELPERS ─────────────────────────────────────────────────
+async function seedData() {
+  const s1 = await get(ref(db,"patients/E_M"));
+  if (!s1.exists()) for (const p of SEED_E_M) await push(ref(db,"patients/E_M"),{...p,ts:Date.now()});
+  const s2 = await get(ref(db,"patients/E_F"));
+  if (!s2.exists()) for (const p of SEED_E_F) await push(ref(db,"patients/E_F"),{...p,ts:Date.now()});
+  const sp = await get(ref(db,"pins"));
+  if (!sp.exists()) await set(ref(db,"pins"),DEFAULT_PINS);
+}
+
+function listenUnit(uid) {
+  if (S.unsub) { off(ref(db,`patients/${S.unit}`)); }
+  S.unit = uid;
+  onValue(ref(db,`patients/${uid}`), snap => {
+    const d = snap.val()||{};
+    S.patients = Object.entries(d).map(([k,v])=>({...v,_k:k}));
+    if (S.screen==="ward") render();
+  });
+}
+
+function listenAll() {
+  onValue(ref(db,"patients"), snap => {
+    S.allData = snap.val()||{};
+    if (S.screen==="admin") render();
+  });
+  onValue(ref(db,"pins"), snap => {
+    if (snap.exists()) S.pins = {...DEFAULT_PINS,...snap.val()};
+  });
+}
+
+async function fbSave(uid, key, data) { await set(ref(db,`patients/${uid}/${key}`),{...data,ts:Date.now()}); }
+async function fbAdd(uid, data)        { await push(ref(db,`patients/${uid}`),{...data,ts:Date.now()}); }
+async function fbDel(uid, key)         { await remove(ref(db,`patients/${uid}/${key}`)); }
+async function fbSetPin(uid, pin)      { await set(ref(db,`pins/${uid}`),pin); }
+
+// ── UTILS ────────────────────────────────────────────────────────────
+const el = id => document.getElementById(id);
+const app = el("app");
+const ccfg = c => CODE_CFG[c]||CODE_CFG[4];
+
+function toast(msg,type="ok") {
+  const t = el("toast");
+  t.className=`toast ${type}`;t.textContent=msg;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add("show")));
+  clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),2800);
+}
+
+function filtered() {
+  let list=[...S.patients];
+  if(S.filter==="1")list=list.filter(p=>p.code==1);
+  else if(S.filter==="2")list=list.filter(p=>p.code==2);
+  else if(S.filter==="r")list=list.filter(p=>p.code>=3);
+  if(S.search){const q=S.search.toLowerCase();list=list.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.civil||"").includes(q)||(p.ward||"").toLowerCase().includes(q));}
+  return list.sort((a,b)=>b.code-a.code);
+}
+
+// ── SVG ICONS ────────────────────────────────────────────────────────
+const icoSave  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`;
+const icoTrash = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>`;
+const icoSearch= `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+const icoBack  = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const icoPlus  = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+const icoCam   = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+const icoChk   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const icoSync  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+const icoCog   = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+
+// ── PATIENT CARD HTML ────────────────────────────────────────────────
+function pCardHTML(p) {
+  const c = ccfg(p.code);
+  return `<div class="pc c${p.code}" data-key="${p._k}">
+    <div class="pstripe"></div>
+    <div class="pbadge">
+      <span style="font-size:20px;font-weight:900">${p.code}</span>
+      <span style="font-size:9px;margin-top:1px">${c.label}</span>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div class="pn">${p.name||""}</div>
+      <div class="pm">
+        <span class="chip">${p.civil||""}</span>
+        <span class="chip">${p.nat||""}</span>
+        ${p.notes?`<span class="chip">${p.notes}</span>`:""}
+      </div>
+    </div>
+    <div class="pw">${p.ward||""}</div>
+  </div>`;
+}
+
+function codePicker(selCode, prefix) {
+  return `<div class="cpick">
+    ${[1,2,3,4].map(c=>`<div class="co ${selCode==c?`s${c}`:""}" data-cpick="${prefix}" data-code="${c}">
+      <div class="cn">${c}</div><div class="cl">${ccfg(c).label}</div>
+    </div>`).join("")}
+  </div>`;
+}
+
+// ── SCREENS ──────────────────────────────────────────────────────────
+function renderHome() {
+  const counts = {};
+  ["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{
+    const uid=`${u}_${g}`, d=S.allData[uid]||{};
+    counts[uid]=Object.keys(d).length;
+  }));
+
+  const unitCards = ["A","B","C","D","E"].map(u=>`
+    <div class="ucard">
+      <div class="uhdr">
+        <span>وحدة ${u}</span>
+        <span style="opacity:.7;font-size:12px">${(counts[`${u}_M`]||0)+(counts[`${u}_F`]||0)} مريض</span>
+      </div>
+      <div class="uwrap">
+        <div class="ubtn female" data-unit="${u}_F">
+          <div class="uico">👩‍⚕️</div>
+          <div class="uname">إناث</div>
+          <div class="ucnt" style="background:#fce7f3;color:#be185d">${counts[`${u}_F`]||0} مريضة</div>
+        </div>
+        <div class="ubtn male" data-unit="${u}_M">
+          <div class="uico">👨‍⚕️</div>
+          <div class="uname">ذكور</div>
+          <div class="ucnt">${counts[`${u}_M`]||0} مريض</div>
+        </div>
+      </div>
+    </div>`).join("");
+
+  return `<div class="screen">
+    <div class="hdr">
+      <div><div class="htitle">🏥 MAK Registry</div><div class="hsub">Mubarak Al-Kabeer Hospital</div></div>
+      <div class="hright">
+        <div class="opill ${S.online?"on":"off"}"><div class="odot ${S.online?"p":""}"></div><span>${S.online?"متصل":"غير متصل"}</span></div>
+        <div class="ibtn" id="btn-admin">${icoCog}</div>
+      </div>
+    </div>
+    <div class="sp" style="padding:12px 12px 100px">${unitCards}</div>
+  </div>`;
+}
+
+function renderPin() {
+  const isAdmin = S.pinTarget==="ADMIN";
+  const unit = ["A","B","C","D","E"].find(u=>S.pinTarget===`${u}_M`||S.pinTarget===`${u}_F`);
+  const gender = S.pinTarget?.endsWith("_M")?"ذكور":"إناث";
+  const dots = [0,1,2,3].map(i=>`<div class="pdot2 ${i<S.pinVal.length?"f":""}"></div>`).join("");
+  const keys = [[1,2,3],[4,5,6],[7,8,9],["",0,"⌫"]];
+  const pad  = keys.map(row=>row.map(k=>
+    k===""?`<div></div>`:
+    `<button class="pkey ${k==="⌫"?"del":""}" data-pin="${k}">${k}</button>`
+  ).join("")).join("");
+
+  return `<div class="screen" style="background:var(--bg)">
+    <div class="hdr">
+      <button class="ibtn" id="btn-back">${icoBack}</button>
+      <div style="flex:1;text-align:center">
+        <div class="htitle">${isAdmin?"🛡️ الإدارة":`وحدة ${unit} — ${gender}`}</div>
+        <div class="hsub">أدخل الرمز السري</div>
+      </div>
+      <div style="width:38px"></div>
+    </div>
+    <div class="sp" style="display:flex;flex-direction:column;align-items:center;padding:20px">
+      <div style="font-size:60px;margin-bottom:8px">${isAdmin?"🛡️":S.pinTarget?.endsWith("_F")?"👩‍⚕️":"👨‍⚕️"}</div>
+      <div class="pdisplay">${dots}</div>
+      ${S.pinError?`<div style="color:var(--r);font-weight:700;margin-bottom:12px;font-size:14px">❌ رمز خاطئ</div>`:""}
+      <div class="pinpad">${pad}</div>
+    </div>
+  </div>`;
+}
+
+function renderWard() {
+  const list = filtered();
+  const total=S.patients.length, g=S.patients.filter(p=>p.code==1).length,
+        y=S.patients.filter(p=>p.code==2).length, r=S.patients.filter(p=>p.code>=3).length;
+  const uid=S.unit, isF=uid?.endsWith("_F"), unit=uid?.[0];
+  return `<div class="screen">
+    <div class="hdr">
+      <button class="ibtn" id="btn-back">${icoBack}</button>
+      <div style="flex:1;text-align:center">
+        <div class="htitle">وحدة ${unit} — ${isF?"إناث":"ذكور"}</div>
+        <div class="hsub">Mubarak Al-Kabeer Hospital</div>
+      </div>
+      <div class="hright">
+        <div class="opill ${S.online?"on":"off"}"><div class="odot ${S.online?"p":""}"></div></div>
+      </div>
+    </div>
+    <div class="offbar ${S.online?"":"show"}">⚠️ غير متصل — البيانات محلية</div>
+    <div class="stats">
+      <div class="stat st ${S.filter==="all"?"act":""}" data-filt="all"><div class="sn">${total}</div><div class="sl">الكل</div></div>
+      <div class="stat sg ${S.filter==="1"?"act":""}" data-filt="1"><div class="sn">${g}</div><div class="sl">🟢</div></div>
+      <div class="stat sy ${S.filter==="2"?"act":""}" data-filt="2"><div class="sn">${y}</div><div class="sl">🟡</div></div>
+      <div class="stat sr ${S.filter==="r"?"act":""}" data-filt="r"><div class="sn">${r}</div><div class="sl">🔴</div></div>
+    </div>
+    <div class="toolbar">
+      <input class="si" id="search-inp" placeholder="ابحث بالاسم أو الرقم المدني..." value="${S.search}">
+      <button class="ibtn" id="btn-add" style="background:var(--blue);border-color:var(--blue);color:#fff">${icoPlus}</button>
+    </div>
+    <div class="slist" id="plist">
+      ${list.length?list.map(pCardHTML).join(""):`<div class="empty">لا توجد نتائج</div>`}
+    </div>
+  </div>`;
+}
+
+function renderDetail() {
+  const p = S.editP;
+  return `<div class="screen">
+    <div class="hdr">
+      <button class="ibtn" id="btn-back">${icoBack}</button>
+      <div style="flex:1;min-width:0;margin:0 8px">
+        <div class="htitle" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+        <div class="hsub">${p.civil}</div>
+      </div>
+    </div>
+    <div class="sp" style="padding:16px 16px 100px">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:0 16px;margin-bottom:16px;box-shadow:var(--shadow)">
+        <div class="ir"><span class="ik">الرقم المدني</span><span class="iv">${p.civil}</span></div>
+        <div class="ir"><span class="ik">الجنسية</span><span class="iv">${p.nat||"—"}</span></div>
+      </div>
+      <div class="fg"><label class="fl">الجناح / السرير</label>
+        <input class="fi" id="e-ward" value="${p.ward||""}"></div>
+      <div class="fg"><label class="fl">مستوى الخطورة</label>${codePicker(S.editCode,"e")}</div>
+      <div class="fg"><label class="fl">ملاحظات</label>
+        <input class="fi" id="e-notes" placeholder="أي ملاحظات..." value="${p.notes||""}"></div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn" id="btn-save">${icoSave} حفظ</button>
+        <button class="btn btn-d" id="btn-delete">${icoTrash}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAdd() {
+  return `<div class="screen">
+    <div class="hdr">
+      <button class="ibtn" id="btn-back">${icoBack}</button>
+      <div style="flex:1;text-align:center"><div class="htitle">إضافة مريض</div></div>
+      <div style="width:38px"></div>
+    </div>
+    <div class="sp" style="padding:16px 16px 100px">
+      <div class="fg"><label class="fl">الاسم الكامل *</label><input class="fi" id="a-name" placeholder="الاسم بالعربي"></div>
+      <div class="fg"><label class="fl">الرقم المدني *</label><input class="fi" id="a-civil" placeholder="الرقم المدني"></div>
+      <div class="fg"><label class="fl">الجنسية</label><input class="fi" id="a-nat" placeholder="كويتي / مصري / ..."></div>
+      <div class="fg"><label class="fl">الجناح / السرير *</label><input class="fi" id="a-ward" placeholder="مثال: W21R8"></div>
+      <div class="fg"><label class="fl">مستوى الخطورة *</label>${codePicker(S.addCode,"a")}</div>
+      <div class="fg"><label class="fl">ملاحظات</label><input class="fi" id="a-notes" placeholder="أي ملاحظات..."></div>
+      <button class="btn" id="btn-save-add">${icoPlus} إضافة مريض</button>
+    </div>
+  </div>`;
+}
+
+function renderAdmin() {
+  const tabs = [
+    {id:"overview",label:"نظرة عامة"},
+    {id:"ocr",label:"استيراد OCR"},
+    {id:"pins",label:"الرموز السرية"},
+  ];
+  let content = "";
+
+  if (S.adminTab==="overview") {
+    const units = ["A","B","C","D","E"];
+    content = units.map(u => {
+      const mData = S.allData[`${u}_M`]||{}, fData = S.allData[`${u}_F`]||{};
+      const mList = Object.entries(mData).map(([k,v])=>({...v,_k:k}));
+      const fList = Object.entries(fData).map(([k,v])=>({...v,_k:k}));
+      const all   = [...mList,...fList];
+      const g=all.filter(p=>p.code==1).length, y=all.filter(p=>p.code==2).length, r=all.filter(p=>p.code>=3).length;
+      return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)">
+        <div style="background:linear-gradient(135deg,#1e40af,#2563eb);padding:10px 14px;color:#fff;font-weight:900;font-size:15px;display:flex;justify-content:space-between">
+          <span>وحدة ${u}</span><span style="opacity:.7;font-size:12px">${all.length} مريض</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);padding:10px;gap:8px;text-align:center">
+          <div><div style="font-size:18px;font-weight:900;color:var(--blue)">${all.length}</div><div style="font-size:10px;color:var(--muted)">الكل</div></div>
+          <div><div style="font-size:18px;font-weight:900;color:var(--g)">${g}</div><div style="font-size:10px;color:var(--muted)">أخضر</div></div>
+          <div><div style="font-size:18px;font-weight:900;color:var(--y)">${y}</div><div style="font-size:10px;color:var(--muted)">أصفر</div></div>
+          <div><div style="font-size:18px;font-weight:900;color:var(--r)">${r}</div><div style="font-size:10px;color:var(--muted)">أحمر</div></div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  if (S.adminTab==="ocr") {
+    content = `
+      <div class="ocr-zone" id="ocr-zone">
+        <input type="file" id="ocr-file" accept="image/*" capture="environment" style="display:none">
+        <div style="font-size:40px;margin-bottom:12px">${icoCam}</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px">التقط صورة أو ارفع ملف</div>
+        <div style="font-size:13px;color:var(--muted)">صورة قائمة المرضى → استيراد فوري</div>
+      </div>
+      ${S.ocrImg?`<img src="${S.ocrImg}" style="width:100%;border-radius:12px;margin:12px 0;max-height:200px;object-fit:cover">`:""}
+      ${S.ocrLoading?`<div style="text-align:center;padding:20px"><div class="loader"></div><p style="margin-top:12px;color:var(--muted)">جاري التحليل بـ Gemini AI...</p></div>`:""}
+      ${S.ocrResults.length?`
+        <div style="margin-top:12px">
+          <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text)">
+            تم اكتشاف ${S.ocrResults.length} مريض — اختر الوحدة:
+          </div>
+          <div class="fg">
+            <select class="fi" id="ocr-unit">
+              ${["A","B","C","D","E"].flatMap(u=>[
+                `<option value="${u}_M">وحدة ${u} — ذكور</option>`,
+                `<option value="${u}_F">وحدة ${u} — إناث</option>`
+              ]).join("")}
+            </select>
+          </div>
+          ${S.ocrResults.map((p,i)=>`
+            <div class="orow">
+              <div class="ochk ${S.ocrSel.includes(i)?"on":""}" data-ocr="${i}">${S.ocrSel.includes(i)?icoChk:""}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px">${p.name||"—"}</div>
+                <div style="font-size:12px;color:var(--muted)">${p.civil||""} · ${p.ward||""}</div>
+              </div>
+              <div style="font-size:18px;font-weight:900;color:${ccfg(p.code).color}">${p.code}</div>
+            </div>`).join("")}
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-g" id="ocr-selall">تحديد الكل</button>
+            <button class="btn" id="ocr-import" ${S.ocrSel.length===0?"disabled":""}>
+              ${icoPlus} استيراد ${S.ocrSel.length} مريض
+            </button>
+          </div>
+        </div>`:""}`;
+  }
+
+  if (S.adminTab==="pins") {
+    const unitLabels = {
+      A_M:"وحدة A ذكور",A_F:"وحدة A إناث",
+      B_M:"وحدة B ذكور",B_F:"وحدة B إناث",
+      C_M:"وحدة C ذكور",C_F:"وحدة C إناث",
+      D_M:"وحدة D ذكور",D_F:"وحدة D إناث",
+      E_M:"وحدة E ذكور",E_F:"وحدة E إناث",
+      ADMIN:"المدير"
+    };
+    content = `
+      <div style="background:var(--rbg);border:1px solid var(--rb);border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--r)">
+        ⚠️ احتفظ بهذه الرموز بسرية تامة
+      </div>
+      ${Object.entries(unitLabels).map(([uid,label])=>`
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)">
+          <div style="flex:1;font-weight:700;font-size:14px">${label}</div>
+          <input class="fi" id="pin-${uid}" value="${S.pins[uid]||""}" maxlength="6" style="width:90px;text-align:center;font-size:18px;font-weight:900;letter-spacing:4px">
+          <button class="btn" style="width:auto;padding:10px 14px" data-savepin="${uid}">${icoSave}</button>
+        </div>`).join("")}`;
+  }
+
+  return `<div class="screen">
+    <div class="hdr">
+      <button class="ibtn" id="btn-back">${icoBack}</button>
+      <div style="flex:1;text-align:center"><div class="htitle">🛡️ لوحة الإدارة</div></div>
+      <div style="width:38px"></div>
+    </div>
+    <div class="tabs">
+      ${tabs.map(t=>`<div class="tab ${S.adminTab===t.id?"act":""}" data-tab="${t.id}">${t.label}</div>`).join("")}
+    </div>
+    <div class="sp" style="padding:12px 12px 80px">${content}</div>
+  </div>`;
+}
+
+// ── BIND EVENTS ──────────────────────────────────────────────────────
+function bindEvents() {
+  // Unit buttons
+  document.querySelectorAll("[data-unit]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const uid = btn.dataset.unit;
+      S.pinTarget = uid;
+      S.pinVal = "";
+      S.pinError = false;
+      S.screen = "pin";
+      render();
+    });
+  });
+
+  // Admin button
+  const ba = el("btn-admin");
+  if (ba) ba.addEventListener("click", () => {
+    S.pinTarget = "ADMIN"; S.pinVal = ""; S.pinError=false; S.screen="pin"; render();
+  });
+
+  // Back button
+  const bb = el("btn-back");
+  if (bb) bb.addEventListener("click", () => {
+    if (S.screen==="ward"||S.screen==="admin") { S.screen="home"; render(); }
+    else if (S.screen==="detail"||S.screen==="add") { S.screen="ward"; render(); }
+    else if (S.screen==="pin") { S.screen="home"; render(); }
+  });
+
+  // PIN pad
+  document.querySelectorAll("[data-pin]").forEach(k => {
+    k.addEventListener("click", () => {
+      const v = k.dataset.pin;
+      if (v==="⌫") { S.pinVal=S.pinVal.slice(0,-1); }
+      else if (S.pinVal.length<6) { S.pinVal+=v; }
+      S.pinError=false;
+      if (S.pinVal.length===4||(S.pins[S.pinTarget]?.length>4&&S.pinVal.length===6)) checkPin();
+      else render();
+    });
+  });
+
+  // Filters
+  document.querySelectorAll("[data-filt]").forEach(f => {
+    f.addEventListener("click", () => { S.filter=f.dataset.filt; render(); });
+  });
+
+  // Search
+  const si = el("search-inp");
+  if (si) si.addEventListener("input", e => { S.search=e.target.value; render(); });
+
+  // Patient card tap
+  document.querySelectorAll(".pc").forEach(c => {
+    c.addEventListener("click", () => {
+      const p = S.patients.find(x=>x._k===c.dataset.key);
+      if (p) { S.editP=p; S.editCode=p.code; S.screen="detail"; render(); }
+    });
+  });
+
+  // Code picker (edit)
+  document.querySelectorAll("[data-cpick='e']").forEach(c => {
+    c.addEventListener("click", () => { S.editCode=parseInt(c.dataset.code); render(); });
+  });
+
+  // Code picker (add)
+  document.querySelectorAll("[data-cpick='a']").forEach(c => {
+    c.addEventListener("click", () => { S.addCode=parseInt(c.dataset.code); render(); });
+  });
+
+  // Save edit
+  const bs = el("btn-save");
+  if (bs) bs.addEventListener("click", async () => {
+    bs.disabled=true;
+    const p = S.editP;
+    const updated = {...p, ward:el("e-ward").value.trim(), code:S.editCode, notes:el("e-notes").value.trim()};
+    try { await fbSave(S.unit, p._k, updated); toast("✅ تم الحفظ"); S.screen="ward"; render(); }
+    catch(e) { toast("خطأ في الحفظ","err"); bs.disabled=false; }
+  });
+
+  // Delete
+  const bd = el("btn-delete");
+  if (bd) bd.addEventListener("click", async () => {
+    if (!confirm(`حذف "${S.editP.name}"؟`)) return;
+    try { await fbDel(S.unit, S.editP._k); toast("🗑 تم الحذف"); S.screen="ward"; render(); }
+    catch(e) { toast("خطأ في الحذف","err"); }
+  });
+
+  // Add
+  const ba2 = el("btn-add");
+  if (ba2) ba2.addEventListener("click", () => { S.addCode=null; S.screen="add"; render(); });
+
+  // Save add
+  const bsa = el("btn-save-add");
+  if (bsa) bsa.addEventListener("click", async () => {
+    const name=el("a-name").value.trim(), civil=el("a-civil").value.trim(),
+          ward=el("a-ward").value.trim(), nat=el("a-nat").value.trim(),
+          notes=el("a-notes").value.trim();
+    if (!name||!civil||!ward||!S.addCode) { toast("يرجى ملء الحقول المطلوبة","err"); return; }
+    bsa.disabled=true;
+    try {
+      await fbAdd(S.unit,{name,civil,nat,ward,code:S.addCode,notes});
+      toast("✅ تمت الإضافة"); S.screen="ward"; render();
+    } catch(e) { toast("خطأ","err"); bsa.disabled=false; }
+  });
+
+  // Admin tabs
+  document.querySelectorAll("[data-tab]").forEach(t => {
+    t.addEventListener("click", () => { S.adminTab=t.dataset.tab; render(); });
+  });
+
+  // OCR zone
+  const oz = el("ocr-zone");
+  if (oz) oz.addEventListener("click", () => el("ocr-file")?.click());
+  const of_ = el("ocr-file");
+  if (of_) of_.addEventListener("change", handleOCRFile);
+
+  // OCR checkboxes
+  document.querySelectorAll("[data-ocr]").forEach(c => {
+    c.addEventListener("click", () => {
+      const i=parseInt(c.dataset.ocr);
+      if (S.ocrSel.includes(i)) S.ocrSel=S.ocrSel.filter(x=>x!==i);
+      else S.ocrSel.push(i);
+      render();
+    });
+  });
+
+  // OCR select all
+  const osa = el("ocr-selall");
+  if (osa) osa.addEventListener("click", () => {
+    S.ocrSel = S.ocrSel.length===S.ocrResults.length ? [] : S.ocrResults.map((_,i)=>i);
+    render();
+  });
+
+  // OCR import
+  const oi = el("ocr-import");
+  if (oi) oi.addEventListener("click", handleOCRImport);
+
+  // Save pins
+  document.querySelectorAll("[data-savepin]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const uid=btn.dataset.savepin, val=el(`pin-${uid}`)?.value.trim();
+      if (!val||val.length<4) { toast("الرمز يجب أن يكون 4 أحرف على الأقل","err"); return; }
+      try { await fbSetPin(uid,val); S.pins[uid]=val; toast("✅ تم حفظ الرمز"); }
+      catch(e) { toast("خطأ","err"); }
+    });
+  });
+}
+
+// ── PIN CHECK ────────────────────────────────────────────────────────
+function checkPin() {
+  const correct = S.pins[S.pinTarget] || DEFAULT_PINS[S.pinTarget];
+  if (S.pinVal === correct) {
+    if (S.pinTarget === "ADMIN") {
+      S.screen = "admin";
+      S.adminTab = "overview";
+      listenAll();
+    } else {
+      S.screen = "ward";
+      S.filter = "all";
+      S.search = "";
+      const uid = S.pinTarget;
+      const u = UNITS_META[uid];
+      listenUnit(uid);
+    }
+    render();
+  } else {
+    S.pinError = true;
+    S.pinVal = "";
+    render();
+  }
+}
+
+const UNITS_META = {
+  A_M:{label:"وحدة A",sub:"ذكور"}, A_F:{label:"وحدة A",sub:"إناث"},
+  B_M:{label:"وحدة B",sub:"ذكور"}, B_F:{label:"وحدة B",sub:"إناث"},
+  C_M:{label:"وحدة C",sub:"ذكور"}, C_F:{label:"وحدة C",sub:"إناث"},
+  D_M:{label:"وحدة D",sub:"ذكور"}, D_F:{label:"وحدة D",sub:"إناث"},
+  E_M:{label:"وحدة E",sub:"ذكور"}, E_F:{label:"وحدة E",sub:"إناث"},
+};
+
+// ── OCR ──────────────────────────────────────────────────────────────
+function handleOCRFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    const b64 = ev.target.result.split(",")[1];
+    S.ocrImg = ev.target.result;
+    S.ocrB64 = b64;
+    S.ocrResults = [];
+    S.ocrSel = [];
+    S.ocrLoading = true;
+    render();
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI}`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          contents:[{parts:[
+            {inline_data:{mime_type:file.type,data:b64}},
+            {text:`Extract ALL patient records from this image. Return ONLY a JSON array, no markdown, no explanation. Each object must have exactly these fields:
+{"name":"full Arabic name","civil":"civil ID number as string","nat":"nationality in Arabic","ward":"ward/bed like W21R8","code":number 1-4,"notes":""}
+Code mapping: 1=green/أخضر, 2=yellow/أصفر, 3=red/أحمر, 4=critical/حرج
+If a field is unclear write empty string. Return only the JSON array.`}
+          ]}]
+        })
+      });
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text||"[]";
+      const clean = text.replace(/```json|```/g,"").trim();
+      S.ocrResults = JSON.parse(clean);
+      S.ocrSel = S.ocrResults.map((_,i)=>i);
+    } catch(err) {
+      toast("خطأ في التحليل — حاول مرة أخرى","err");
+      S.ocrResults = [];
+    }
+    S.ocrLoading = false;
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleOCRImport() {
+  const uid = el("ocr-unit")?.value;
+  if (!uid||S.ocrSel.length===0) return;
+  const btn = el("ocr-import");
+  btn.disabled = true;
+  btn.textContent = "جاري الاستيراد...";
+  try {
+    for (const i of S.ocrSel) {
+      const p = S.ocrResults[i];
+      await fbAdd(uid, {name:p.name||"",civil:p.civil||"",nat:p.nat||"",ward:p.ward||"",code:parseInt(p.code)||2,notes:p.notes||""});
+    }
+    toast(`✅ تم استيراد ${S.ocrSel.length} مريض`);
+    S.ocrResults=[]; S.ocrSel=[]; S.ocrImg=null;
+    render();
+  } catch(e) {
+    toast("خطأ في الاستيراد","err");
+    btn.disabled=false;
+  }
+}
+
+// ── INSTALL PROMPT ───────────────────────────────────────────────────
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault(); deferredPrompt=e;
+  if (!localStorage.getItem("mak_installed")) {
+    setTimeout(()=>el("ibanner")?.classList.add("show"),3000);
+  }
+});
+el("ibanner-btn").addEventListener("click", () => {
+  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>dismissInstall()); }
+  else if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    alert("iPhone:\n1. اضغط زر المشاركة ↑\n2. اختر «إضافة إلى الشاشة الرئيسية»\n3. اضغط «إضافة»");
+    dismissInstall();
+  }
+});
+window.dismissInstall = () => {
+  el("ibanner")?.classList.remove("show");
+  localStorage.setItem("mak_installed","1");
+};
+
+// ── CONNECTIVITY ─────────────────────────────────────────────────────
+window.addEventListener("online",  () => { S.online=true;  render(); });
+window.addEventListener("offline", () => { S.online=false; render(); });
+
+// ── BOOT ─────────────────────────────────────────────────────────────
+async function boot() {
+  listenAll();
+  await seedData();
+  S.screen = "home";
+  render();
+}
+boot();
+</script>
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");</script>
+</body>
+</html>
