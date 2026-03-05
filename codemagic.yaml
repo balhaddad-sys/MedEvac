@@ -77,6 +77,8 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: latest
+      groups:
+        - apple_credentials
       vars:
         BUNDLE_ID: com.medevac.app
         APP_STORE_CONNECT_KEY_ID: 346WF7MN3Z
@@ -103,82 +105,53 @@ workflows:
           cd ios/MedEvac
           xcodegen generate
 
-      - name: Set up code signing
+      - name: Fetch signing files via API
         script: |
+          # Write API key to file
+          echo -n "$APP_STORE_CONNECT_PRIVATE_KEY" > /tmp/AuthKey.p8
+
+          # Fetch certificate + provisioning profile from Apple
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --key-id "$APP_STORE_CONNECT_KEY_ID" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key @file:/tmp/AuthKey.p8 \
+            --create
+
+          # Initialize keychain and install certs
           keychain initialize
           keychain add-certificates
 
-          # Debug: list available certificates
-          echo "=== Certificates in keychain ==="
+          # Install profiles and configure Xcode project
+          xcode-project use-profiles
+
+          # Debug output
+          echo "=== Certificates ==="
           security find-identity -v -p codesigning
-
-          # Install provisioning profiles
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "=== Available profiles ==="
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || echo "No profiles dir"
-
-          # Try use-profiles
-          xcode-project use-profiles --verbose || echo "use-profiles failed, continuing..."
-
-          # Debug: check what profiles are now installed
-          echo "=== Installed profiles ==="
+          echo "=== Profiles ==="
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/ || true
 
       - name: Build iOS app
         script: |
           cd ios/MedEvac
-
-          # Find provisioning profile UUID
-          PROFILE_UUID=""
-          for profile in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
-            if [ -f "$profile" ]; then
-              PROFILE_UUID=$(security cms -D -i "$profile" 2>/dev/null | grep -A1 UUID | grep string | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
-              PROFILE_NAME=$(security cms -D -i "$profile" 2>/dev/null | grep -A1 Name | head -2 | grep string | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
-              echo "Found profile: $PROFILE_NAME (UUID: $PROFILE_UUID)"
-            fi
-          done
-
-          if [ -n "$PROFILE_UUID" ]; then
-            echo "Using profile UUID: $PROFILE_UUID"
-            xcodebuild archive \
-              -project MedEvac.xcodeproj \
-              -scheme MedEvac \
-              -sdk iphoneos \
-              -configuration Release \
-              -archivePath build/MedEvac.xcarchive \
-              DEVELOPMENT_TEAM="YPGU5K4U57" \
-              CODE_SIGN_STYLE="Manual" \
-              CODE_SIGN_IDENTITY="Apple Distribution" \
-              PROVISIONING_PROFILE="$PROFILE_UUID" \
-              PROVISIONING_PROFILE_SPECIFIER="" \
-              clean archive
-          else
-            echo "No provisioning profile found, trying automatic signing..."
-            xcodebuild archive \
-              -project MedEvac.xcodeproj \
-              -scheme MedEvac \
-              -sdk iphoneos \
-              -configuration Release \
-              -archivePath build/MedEvac.xcarchive \
-              DEVELOPMENT_TEAM="YPGU5K4U57" \
-              CODE_SIGN_STYLE="Manual" \
-              CODE_SIGN_IDENTITY="Apple Distribution" \
-              clean archive
-          fi
+          xcodebuild archive \
+            -project MedEvac.xcodeproj \
+            -scheme MedEvac \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath build/MedEvac.xcarchive \
+            DEVELOPMENT_TEAM="YPGU5K4U57" \
+            clean archive
 
       - name: Export IPA
         script: |
           cd ios/MedEvac
           xcode-project build-ipa \
-            --archive-path build/MedEvac.xcarchive \
-            || xcodebuild -exportArchive \
-              -archivePath build/MedEvac.xcarchive \
-              -exportPath build/export \
-              -exportOptionsPlist ExportOptions.plist
+            --archive-path build/MedEvac.xcarchive
 
     artifacts:
       - ios/MedEvac/build/*.ipa
-      - ios/MedEvac/build/export/*.ipa
 
     publishing:
       email:
