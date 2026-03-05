@@ -34,15 +34,8 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_FILE: MedEvac/Info.plist
-        DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
-        CODE_SIGN_IDENTITY: "Apple Distribution"
-        CODE_SIGN_STYLE: Manual
-        PROVISIONING_PROFILE_SPECIFIER: ""
+        DEVELOPMENT_TEAM: YPGU5K4U57
+        CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
-      configs:
-        Debug:
-          CODE_SIGN_IDENTITY: "Apple Development"
-        Release:
-          CODE_SIGN_IDENTITY: "Apple Distribution"
