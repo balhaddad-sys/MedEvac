@@ -315,12 +315,15 @@ async function seedData() {
 function listenUnit(uid) {
   if (S.unsub) { off(ref(db,`patients/${S.unit}`)); }
   S.unit = uid;
+  S.patients = [];
   onValue(ref(db,`patients/${uid}`), snap => {
     const d = snap.val()||{};
-    const wasEmpty = S.patients.length === 0;
     S.patients = Object.entries(d).map(([k,v])=>({...v,_k:k}));
     if (S.screen==="ward") render();
-    if (wasEmpty && S.patients.length > 0) emergencyBackupPNG();
+    if (S._backupPending && S.patients.length > 0) {
+      S._backupPending = false;
+      emergencyBackupPNG();
+    }
   });
 }
 
@@ -916,6 +919,7 @@ function checkPin() {
       S.screen = "ward";
       S.filter = "all";
       S.search = "";
+      S._backupPending = true;
       const uid = S.pinTarget;
       const u = UNITS_META[uid];
       listenUnit(uid);
