@@ -184,19 +184,33 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 .ocr-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
 .ocr-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--acc);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
 .ocr-chk.on{background:var(--acc)}
-.ios-prompt{display:none;position:fixed;left:50%;transform:translateX(-50%);width:90%;max-width:340px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:16px;padding:18px 20px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:10000;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;border:.5px solid rgba(0,0,0,.08);animation:ios-fade .3s ease}
-@keyframes ios-fade{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-.ios-prompt__hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.ios-prompt__icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ios-prompt__title{font-size:15px;font-weight:700;color:#1c1c1e;letter-spacing:-.2px}
-.ios-prompt__sub{font-size:12px;color:#8e8e93;margin-top:1px}
-.ios-prompt__close{position:absolute;top:12px;right:14px;background:rgba(0,0,0,.06);border:none;width:28px;height:28px;border-radius:14px;font-size:16px;color:#8e8e93;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.ios-prompt__body{font-size:13px;color:#3a3a3c;line-height:1.5;margin-bottom:4px}
-.ios-prompt__body strong{color:#1c1c1e}
-.ios-prompt__share{display:inline-block;vertical-align:middle;width:18px;height:18px}
-.ios-prompt__arrow-up,.ios-prompt__arrow-down{display:none;position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent}
-.ios-prompt__arrow-up{top:-12px;border-bottom:12px solid rgba(255,255,255,.92)}
-.ios-prompt__arrow-down{bottom:-12px;border-top:12px solid rgba(255,255,255,.92)}
+.pwa-wt{display:none;position:fixed;left:50%;transform:translateX(-50%);width:280px;z-index:10000;background:rgba(255,255,255,.93);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:24px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;border:.5px solid rgba(0,0,0,.06);animation:wt-in .35s cubic-bezier(.22,1,.36,1)}
+@keyframes wt-in{from{opacity:0;transform:translateX(-50%) scale(.92)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+.pwa-wt.safari-bottom{bottom:90px}
+.pwa-wt.safari-top{top:90px}
+.pwa-wt__close{position:absolute;top:-10px;right:-10px;background:#333;color:#fff;border:none;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:1}
+.pwa-wt__close:active{background:#555}
+.pwa-wt__anim{width:100%;height:200px;border-radius:18px;background:linear-gradient(180deg,#f2f2f7,#e5e5ea);border:1px solid rgba(0,0,0,.08);overflow:hidden;position:relative;margin-bottom:12px}
+.pwa-wt__safari{position:absolute;bottom:0;left:0;right:0;height:44px;background:rgba(255,255,255,.95);border-top:1px solid rgba(0,0,0,.1);display:flex;align-items:center;justify-content:space-around;padding:0 16px}
+.pwa-wt__safari.top{bottom:auto;top:0;border-top:none;border-bottom:1px solid rgba(0,0,0,.1)}
+.pwa-wt__share-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;position:relative}
+.pwa-wt__share-btn svg{color:#007AFF}
+.pwa-wt__finger{position:absolute;width:24px;height:24px;opacity:0;animation:wt-tap 4s ease-in-out infinite}
+@keyframes wt-tap{0%,100%{opacity:0;transform:translate(30px,30px)}15%{opacity:.8;transform:translate(0,0)}25%{opacity:1;transform:translate(0,2px) scale(.95)}35%{opacity:1;transform:translate(0,0)}50%{opacity:0;transform:translate(0,-10px)}51%,99%{opacity:0}}
+.pwa-wt__menu{position:absolute;left:50%;transform:translateX(-50%);width:220px;background:#fff;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.15);opacity:0;animation:wt-menu 4s ease-in-out infinite;overflow:hidden}
+.pwa-wt__menu.from-bottom{bottom:52px}
+.pwa-wt__menu.from-top{top:52px}
+@keyframes wt-menu{0%,30%{opacity:0;transform:translateX(-50%) translateY(8px)}40%{opacity:1;transform:translateX(-50%) translateY(0)}85%{opacity:1;transform:translateX(-50%) translateY(0)}95%,100%{opacity:0;transform:translateX(-50%) translateY(8px)}}
+.pwa-wt__mitem{padding:10px 14px;font-size:12px;color:#1c1c1e;border-bottom:.5px solid rgba(0,0,0,.06);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.pwa-wt__mitem.hl{background:rgba(0,122,255,.08);color:#007AFF;font-weight:600}
+.pwa-wt__mitem svg{width:16px;height:16px;flex-shrink:0}
+.pwa-wt__finger2{position:absolute;width:20px;height:20px;opacity:0;animation:wt-tap2 4s ease-in-out infinite}
+@keyframes wt-tap2{0%,55%{opacity:0}65%{opacity:.8;transform:translate(0,0)}75%{opacity:1;transform:translate(0,2px) scale(.95)}82%{opacity:1;transform:translate(0,0)}90%,100%{opacity:0}}
+.pwa-wt__caption{font-size:13px;font-weight:600;color:#1c1c1e;margin-bottom:4px}
+.pwa-wt__subcap{font-size:11px;color:#8e8e93;line-height:1.4}
+.pwa-wt__arrow{position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent}
+.pwa-wt__arrow.up{top:-13px;border-bottom:13px solid rgba(255,255,255,.93)}
+.pwa-wt__arrow.down{bottom:-13px;border-top:13px solid rgba(255,255,255,.93)}
 </style>
 </head>
 <body>
@@ -236,17 +250,13 @@ window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;colo
     <div class="install-guide__hint" id="install-guide-hint"></div>
   </div>
 </div>
-<div class="ios-prompt" id="ios-prompt">
-  <div class="ios-prompt__arrow-up" id="ios-arrow-up"></div>
-  <div class="ios-prompt__hdr">
-    <div class="ios-prompt__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></div>
-    <div><div class="ios-prompt__title">Install MedEvac</div><div class="ios-prompt__sub">Works offline in emergencies</div></div>
-  </div>
-  <button class="ios-prompt__close" id="ios-prompt-close">&times;</button>
-  <div class="ios-prompt__body">
-    Tap <svg class="ios-prompt__share" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7-7 7 7"/><rect x="4" y="14" width="16" height="7" rx="2"/></svg> <strong>Share</strong> then scroll down and tap <strong>"Add to Home Screen"</strong>.
-  </div>
-  <div class="ios-prompt__arrow-down" id="ios-arrow-down"></div>
+<div class="pwa-wt" id="pwa-wt">
+  <div class="pwa-wt__arrow up" id="wt-arrow-up"></div>
+  <button class="pwa-wt__close" id="wt-close">&times;</button>
+  <div class="pwa-wt__anim" id="wt-anim"></div>
+  <div class="pwa-wt__caption">Install MedEvac</div>
+  <div class="pwa-wt__subcap">Tap Share, then "Add to Home Screen"</div>
+  <div class="pwa-wt__arrow down" id="wt-arrow-down"></div>
 </div>
 
 <script type="module">
@@ -500,25 +510,41 @@ window.addEventListener("beforeinstallprompt",e=>{
     if(b)b.classList.add("show");
   },3000);
 });
-// iOS Safari: native-style prompt with Safari bar detection
+// iOS Safari: animated walkthrough with Safari bar detection
 function showIOSPrompt(){
-  const p=$("ios-prompt");if(!p)return;
-  const au=$("ios-arrow-up"),ad=$("ios-arrow-down");
-  // Detect Safari bar position using visualViewport
+  const p=$("pwa-wt");if(!p)return;
+  const anim=$("wt-anim"),au=$("wt-arrow-up"),ad=$("wt-arrow-down");
+  // Detect Safari bar position
   const vv=window.visualViewport;
-  if(vv&&vv.offsetTop>10){
-    // Bar at TOP (older iOS or moved)
-    p.style.top="90px";p.style.bottom="auto";
-    if(au)au.style.display="block";if(ad)ad.style.display="none";
-  }else{
-    // Bar at BOTTOM (iOS 15+ default)
-    p.style.bottom="80px";p.style.top="auto";
-    if(ad)ad.style.display="block";if(au)au.style.display="none";
+  const barTop=vv&&vv.offsetTop>10;
+  // Position overlay
+  p.classList.remove("safari-top","safari-bottom");
+  p.classList.add(barTop?"safari-top":"safari-bottom");
+  if(au)au.style.display=barTop?"block":"none";
+  if(ad)ad.style.display=barTop?"none":"block";
+  // Build animated Safari mockup
+  if(anim){
+    const shareIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+    const addIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+    const fingerSvg='<svg viewBox="0 0 24 24" fill="rgba(0,0,0,.6)" width="100%" height="100%"><path d="M12 2C9.8 2 8 3.8 8 6v6.5l-1.3-1.3c-.8-.8-2-.8-2.8 0s-.8 2 0 2.8l5.7 5.7c.4.4 1 .6 1.6.6H17c1.7 0 3-1.3 3-3v-5.5c0-1.1-.9-2-2-2s-2 .9-2 2V10c0-1.1-.9-2-2-2s-2 .9-2 2V6c0-2.2-1.8-4-4-4z"/></svg>';
+    const barPos=barTop?"top":"bottom";
+    const menuPos=barTop?"from-top":"from-bottom";
+    anim.innerHTML='<div class="pwa-wt__safari'+(barTop?" top":"")+'">'
+      +'<div style="width:140px;height:28px;background:rgba(0,0,0,.04);border-radius:8px"></div>'
+      +'<div class="pwa-wt__share-btn" id="wt-share">'+shareIcon
+      +'<div class="pwa-wt__finger" style="'+(barTop?"top":"bottom")+':0;right:-8px">'+fingerSvg+'</div></div>'
+      +'</div>'
+      +'<div class="pwa-wt__menu '+menuPos+'">'
+      +'<div class="pwa-wt__mitem"><svg viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</div>'
+      +'<div class="pwa-wt__mitem hl" style="position:relative">'+addIcon+'Add to Home Screen'
+      +'<div class="pwa-wt__finger2" style="right:10px;top:50%;transform:translateY(-50%)">'+fingerSvg+'</div></div>'
+      +'<div class="pwa-wt__mitem"><svg viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Find on Page</div>'
+      +'</div>';
   }
   p.style.display="block";
 }
-function hideIOSPrompt(){const p=$("ios-prompt");if(p)p.style.display="none";localStorage.setItem(installGuideKey,"1");}
-const iosClose=$("ios-prompt-close");if(iosClose)iosClose.addEventListener("click",hideIOSPrompt);
+function hideIOSPrompt(){const p=$("pwa-wt");if(p)p.style.display="none";localStorage.setItem(installGuideKey,"1");}
+const wtClose=$("wt-close");if(wtClose)wtClose.addEventListener("click",hideIOSPrompt);
 
 if(_isIOS&&!_isStandalone&&(_testIOS||!localStorage.getItem(installGuideKey))){
   setTimeout(showIOSPrompt,2000);
