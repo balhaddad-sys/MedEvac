@@ -145,27 +145,35 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 .tab{flex:1;padding:12px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
 .tab.act{color:var(--acc);border-bottom-color:var(--acc)}
 .hero{background:var(--pri);border-radius:var(--radius);padding:20px;margin-bottom:12px;color:#fff;box-shadow:var(--shadow-lg)}
-.ibanner{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;background:var(--pri);padding:14px 16px calc(14px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px;z-index:200;transform:translateY(100%);transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.ibanner{position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:16px 20px calc(16px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:14px;z-index:200;transform:translateY(100%);transition:transform .4s cubic-bezier(.22,1,.36,1);border-top:1px solid rgba(56,189,248,.15);box-shadow:0 -8px 32px rgba(0,0,0,.4)}
 .ibanner.show{transform:translateY(0)}
-.ibanner strong{font-size:13px;font-weight:800;color:#fff;display:block}
-.ibanner span{font-size:11px;color:#94a3b8}
-.install-guide{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;z-index:400;backdrop-filter:blur(6px)}
+.ibanner strong{font-size:14px;font-weight:800;color:#fff;display:block;letter-spacing:-.2px}
+.ibanner span{font-size:11px;color:#64748b;margin-top:2px}
+.install-guide{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:400;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .install-guide.show{display:flex}
-.install-guide__card{width:min(420px,calc(100% - 40px));background:#0f172a;border-radius:20px;padding:24px;box-shadow:0 20px 40px rgba(15,23,42,.55);color:#fff;position:relative;font-family:'Inter',system-ui,sans-serif}
-.install-guide__close{position:absolute;top:12px;right:12px;width:32px;height:32px;border:none;border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:18px;cursor:pointer}
-.install-guide__title{font-size:20px;font-weight:800;margin-bottom:6px}
-.install-guide__desc{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:16px}
-.install-guide__step-title{font-size:16px;font-weight:700;margin-bottom:4px}
-.install-guide__step-desc{font-size:13px;color:#cbd5f5;margin-bottom:16px;line-height:1.4}
-.install-guide__progress{display:flex;gap:6px;margin-bottom:16px}
-.install-guide__progress span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.3)}
-.install-guide__progress span.active{background:#38bdf8;box-shadow:0 0 6px rgba(56,189,248,.8)}
-.install-guide__actions{display:flex;gap:8px;margin-bottom:12px}
-.install-guide__actions button{flex:1;border-radius:12px;border:none;padding:11px 0;font-weight:700;font-size:13px}
-.install-guide__actions button:disabled{opacity:.4;cursor:not-allowed}
-.install-guide__hint{font-size:12px;color:rgba(255,255,255,.6);text-align:center}
-.ib-btn{background:#fff;color:var(--pri);border:none;border-radius:var(--radius-xs);padding:10px 18px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
-.ib-x{background:none;border:none;color:rgba(255,255,255,.3);font-size:16px;cursor:pointer}
+.install-guide__card{width:100%;max-width:430px;background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);border-radius:24px 24px 0 0;padding:32px 24px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -16px 48px rgba(0,0,0,.5);color:#fff;position:relative;font-family:'Inter',system-ui,sans-serif;animation:ig-slide .35s cubic-bezier(.22,1,.36,1)}
+@keyframes ig-slide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.install-guide__close{position:absolute;top:16px;right:16px;width:36px;height:36px;border:none;border-radius:12px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.install-guide__close:active{background:rgba(255,255,255,.15)}
+.install-guide__icon{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 8px 24px rgba(14,165,233,.3)}
+.install-guide__title{font-size:22px;font-weight:900;margin-bottom:6px;letter-spacing:-.5px}
+.install-guide__desc{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:24px;line-height:1.5}
+.install-guide__steps{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.install-guide__step{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);transition:all .2s}
+.install-guide__step.active{background:rgba(14,165,233,.08);border-color:rgba(14,165,233,.2)}
+.install-guide__step-num{width:28px;height:28px;border-radius:10px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:rgba(255,255,255,.4);flex-shrink:0}
+.install-guide__step.active .install-guide__step-num{background:var(--acc);color:#fff;box-shadow:0 4px 12px rgba(14,165,233,.4)}
+.install-guide__step-text{flex:1;min-width:0}
+.install-guide__step-title{font-size:13px;font-weight:700;margin-bottom:2px;color:rgba(255,255,255,.85)}
+.install-guide__step.active .install-guide__step-title{color:#fff}
+.install-guide__step-desc{font-size:11.5px;color:rgba(255,255,255,.4);line-height:1.4}
+.install-guide__step.active .install-guide__step-desc{color:rgba(255,255,255,.65)}
+.install-guide__cta{width:100%;border:none;border-radius:14px;padding:14px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;box-shadow:0 8px 24px rgba(14,165,233,.25);transition:transform .15s,box-shadow .15s;letter-spacing:-.2px}
+.install-guide__cta:active{transform:scale(.97);box-shadow:0 4px 12px rgba(14,165,233,.2)}
+.install-guide__hint{font-size:11px;color:rgba(255,255,255,.35);text-align:center;margin-top:12px;line-height:1.4}
+.ib-btn{background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;border:none;border-radius:12px;padding:10px 20px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(14,165,233,.3);transition:transform .15s}
+.ib-btn:active{transform:scale(.95)}
+.ib-x{background:none;border:none;color:rgba(255,255,255,.25);font-size:18px;cursor:pointer;padding:4px}
 .t-overlay{position:fixed;inset:0;background:rgba(15,23,42,.85);backdrop-filter:blur(16px);z-index:500;display:flex;align-items:center;justify-content:center}
 .c-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(8px);z-index:400;display:flex;align-items:center;justify-content:center}
 .modal{background:var(--card);border-radius:var(--radius);padding:28px 22px;text-align:center;max-width:300px;width:90%;box-shadow:var(--shadow-lg)}
@@ -198,24 +206,20 @@ window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;colo
   <div style="color:rgba(255,255,255,.5);font-size:13px;font-weight:600">MedEvac is locked</div>
 </div>
 <div class="ibanner" id="ibanner">
-  <div style="flex:1"><strong>Install MedEvac</strong><span>Add to home screen</span></div>
+  <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+  <div style="flex:1"><strong>Install MedEvac</strong><span>Works offline in emergencies</span></div>
   <button class="ib-btn" id="ib-btn">Install</button>
   <button class="ib-x" onclick="dismissInstall()">&#x2715;</button>
 </div>
-<div class="install-guide" id="install-guide" aria-live="polite" role="dialog" aria-label="Add MedEvac to home screen">
+<div class="install-guide" id="install-guide" aria-live="polite" role="dialog" aria-label="Install MedEvac">
   <div class="install-guide__card">
-    <button class="install-guide__close" id="install-guide-close" aria-label="Close instructions">×</button>
-    <div class="install-guide__title">Add MedEvac to your Home screen</div>
-    <div class="install-guide__desc">A quick, interactive walk-through so the app is always just one tap away.</div>
-    <div class="install-guide__step-title" id="install-guide-step-title"></div>
-    <div class="install-guide__step-desc" id="install-guide-step-desc"></div>
-    <div class="install-guide__progress" id="install-guide-progress"></div>
-    <div class="install-guide__actions">
-      <button class="btn btn2" id="install-guide-prev">Back</button>
-      <button class="btn" id="install-guide-next">Next</button>
-    </div>
-    <button class="btn" id="install-guide-now">Open install prompt</button>
-    <div class="install-guide__hint" id="install-guide-hint">Need help? Tap the browser menu (or share icon on iOS) and choose “Add to Home screen”.</div>
+    <button class="install-guide__close" id="install-guide-close" aria-label="Close">×</button>
+    <div class="install-guide__icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+    <div class="install-guide__title">Install MedEvac</div>
+    <div class="install-guide__desc">Add to your home screen for instant access. Works offline during emergencies.</div>
+    <div class="install-guide__steps" id="install-guide-steps"></div>
+    <button class="install-guide__cta" id="install-guide-now">Install Now</button>
+    <div class="install-guide__hint" id="install-guide-hint"></div>
   </div>
 </div>
 
@@ -276,28 +280,25 @@ chk:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" s
 const PINS={A_M:"1111",A_F:"1112",B_M:"2221",B_F:"2222",C_M:"3331",C_F:"3332",D_M:"4441",D_F:"4442",E_M:"5551",E_F:"5552",ADMIN:"0000"};
 const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"},4:{label:"Critical",cls:"red"}};
 const cc=c=>CC[c]||CC[4];
-const installSteps=[
-  {title:"Step 1 · Open browser controls",desc:"Tap the three-dot menu (or share icon on iPhone) to open browser controls."},
-  {title:"Step 2 · Choose Add to Home screen",desc:"From the menu pick “Add to Home screen” or the equivalent “Add to Home”. It's usually near the bottom."},
-  {title:"Step 3 · Confirm and test",desc:"Adjust the name if you like, tap Add, then find the MedEvac icon on your home screen."}
+const _isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const _isStandalone=window.navigator.standalone||window.matchMedia("(display-mode:standalone)").matches;
+const installSteps=_isIOS?[
+  {title:"Step 1 · Tap the Share button",desc:"Tap the Share icon (square with up arrow) at the bottom of Safari."},
+  {title:"Step 2 · Add to Home Screen",desc:"Scroll down and tap “Add to Home Screen”."},
+  {title:"Step 3 · Confirm",desc:"Tap “Add” in the top right. MedEvac will appear on your home screen as a full-screen app."}
+]:[
+  {title:"Step 1 · Open browser menu",desc:"Tap the three-dot menu (⋮) in the top right of your browser."},
+  {title:"Step 2 · Choose Install app",desc:"From the menu pick “Add to Home screen” or “Install app”."},
+  {title:"Step 3 · Confirm and test",desc:"Tap Add/Install, then find the MedEvac icon on your home screen."}
 ];
 const installGuideKey="mk_install_guide_shown";
-let installGuideStep=0;
 
 function renderInstallGuide(){
-  const guide=document.getElementById("install-guide");
-  if(!guide)return;
-  const title=document.getElementById("install-guide-step-title");
-  const desc=document.getElementById("install-guide-step-desc");
-  const progress=document.getElementById("install-guide-progress");
-  const step=installSteps[installGuideStep]||installSteps[0];
-  if(title)title.textContent=step.title;
-  if(desc)desc.textContent=step.desc;
-  if(progress)progress.innerHTML=installSteps.map((s,i)=>`<span class="${i===installGuideStep?"active":""}"></span>`).join("");
-  const prev=document.getElementById("install-guide-prev");
-  const next=document.getElementById("install-guide-next");
-  if(prev)prev.disabled=installGuideStep===0;
-  if(next)next.disabled=installGuideStep===installSteps.length-1;
+  const el=document.getElementById("install-guide-steps");
+  if(!el)return;
+  el.innerHTML=installSteps.map((s,i)=>'<div class="install-guide__step active"><div class="install-guide__step-num">'+(i+1)+'</div><div class="install-guide__step-text"><div class="install-guide__step-title">'+s.title.replace(/^Step \d+ \u00b7 /,"")+'</div><div class="install-guide__step-desc">'+s.desc+'</div></div></div>').join("");
+  const hint=document.getElementById("install-guide-hint");
+  if(hint)hint.textContent=_isIOS?"No app store needed \u2014 it\u2019s a web app that works like a native app.":"One tap install \u2014 no app store needed.";
 }
 
 function showInstallGuide(force=false){
@@ -305,7 +306,6 @@ function showInstallGuide(force=false){
   if(!guide)return;
   if(!force&&!installSteps.length)return;
   if(!force&&localStorage.getItem(installGuideKey))return;
-  installGuideStep=0;
   renderInstallGuide();
   guide.classList.add("show");
   localStorage.setItem(installGuideKey,"1");
@@ -314,11 +314,6 @@ function showInstallGuide(force=false){
 function hideInstallGuide(){
   const guide=document.getElementById("install-guide");
   if(guide)guide.classList.remove("show");
-}
-
-function advanceInstallGuide(delta){
-  installGuideStep=Math.max(0,Math.min(installSteps.length-1,installGuideStep+delta));
-  renderInstallGuide();
 }
 
 function openInstallPrompt(){
@@ -478,14 +473,14 @@ window.addEventListener("beforeinstallprompt",e=>{
     if(b)b.classList.add("show");
   },3000);
 });
+// iOS Safari: no beforeinstallprompt, so auto-show guide for first-time visitors
+if(_isIOS&&!_isStandalone&&!localStorage.getItem(installGuideKey)){
+  setTimeout(()=>{showInstallGuide();const b=$("ibanner");if(b&&!localStorage.getItem("mi"))b.classList.add("show");},2000);
+}
 const ib=$("ib-btn");if(ib)ib.addEventListener("click",()=>showInstallGuide(true));
 window.dismissInstall=()=>{const b=$("ibanner");if(b)b.classList.remove("show");localStorage.setItem("mi","1");};
 window.addEventListener("online",()=>{S.online=true;render();syncQueue();});
 window.addEventListener("offline",()=>{S.online=false;render();});
-const installGuidePrev=$("install-guide-prev");
-if(installGuidePrev)installGuidePrev.addEventListener("click",()=>advanceInstallGuide(-1));
-const installGuideNext=$("install-guide-next");
-if(installGuideNext)installGuideNext.addEventListener("click",()=>advanceInstallGuide(1));
 const installGuideNow=$("install-guide-now");
 if(installGuideNow)installGuideNow.addEventListener("click",openInstallPrompt);
 const installGuideClose=$("install-guide-close");
