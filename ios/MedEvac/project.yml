@@ -36,7 +36,7 @@ targets:
         LSApplicationCategoryType: public.app-category.medical
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
-          NSAllowsArbitraryLoadsInWebContent: true
+          NSAllowsArbitraryLoadsInWebContent: false
         UILaunchScreen:
           UIColorName: LaunchBg
         LSRequiresIPhoneOS: true

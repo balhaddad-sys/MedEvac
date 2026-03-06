@@ -25,17 +25,21 @@ workflows:
           curl -sL "https://unit-e-1d07b.web.app/icon-512.png" -o twa-build/icon-512.png
           ls -la twa-build/icon-512.png
 
-      - name: Generate signing keystore
+      - name: Restore signing keystore
         script: |
           cd twa-build
-          keytool -genkeypair \
-            -alias medevac \
-            -keyalg RSA -keysize 2048 \
-            -validity 10000 \
-            -keystore keystore.jks \
-            -storepass "${CM_KEYSTORE_PASSWORD:-medevac123}" \
-            -keypass "${CM_KEYSTORE_PASSWORD:-medevac123}" \
-            -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
+          if [ -n "$CM_KEYSTORE_BASE64" ]; then
+            echo "$CM_KEYSTORE_BASE64" | base64 --decode > keystore.jks
+          else
+            keytool -genkeypair \
+              -alias medevac \
+              -keyalg RSA -keysize 2048 \
+              -validity 10000 \
+              -keystore keystore.jks \
+              -storepass "${CM_KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD not set}" \
+              -keypass "${CM_KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD not set}" \
+              -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
+          fi
 
       - name: Create TWA Android project
         script: |
@@ -96,9 +100,9 @@ workflows:
               signingConfigs {
                   release {
                       storeFile file("../keystore.jks")
-                      storePassword System.getenv("CM_KEYSTORE_PASSWORD") ?: "medevac123"
+                      storePassword System.getenv("CM_KEYSTORE_PASSWORD")
                       keyAlias "medevac"
-                      keyPassword System.getenv("CM_KEYSTORE_PASSWORD") ?: "medevac123"
+                      keyPassword System.getenv("CM_KEYSTORE_PASSWORD")
                   }
               }
               buildTypes {
@@ -127,7 +131,7 @@ workflows:
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET"/>
               <application
-                  android:allowBackup="true"
+                  android:allowBackup="false"
                   android:icon="@mipmap/ic_launcher"
                   android:label="MedEvac"
                   android:theme="@style/AppTheme"

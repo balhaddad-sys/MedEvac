@@ -2,7 +2,7 @@ import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-ap
 import{getDatabase,ref,onValue,set,push,remove,get,off}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import{getAuth,signInAnonymously,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFunctions,httpsCallable,connectFunctionsEmulator}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js";
-const _app=initializeApp({apiKey:"AIzaSyBuuSFWmjkDPiF-LNlZkjVcMDPK9sHyYEQ",authDomain:"unit-e-1d07b.firebaseapp.com",databaseURL:"https://unit-e-1d07b-default-rtdb.europe-west1.firebasedatabase.app",projectId:"unit-e-1d07b",storageBucket:"unit-e-1d07b.firebasestorage.app",messagingSenderId:"465930916288",appId:"1:465930916258:web:89210233e6ba1004d262fb"});
+const _app=initializeApp({apiKey:"AIzaSyBuuSFWmjkDPiF-LNlZkjVcMDPK9sHyYEQ",authDomain:"unit-e-1d07b.firebaseapp.com",databaseURL:"https://unit-e-1d07b-default-rtdb.europe-west1.firebasedatabase.app",projectId:"unit-e-1d07b",storageBucket:"unit-e-1d07b.firebasestorage.app",messagingSenderId:"465930916258",appId:"1:465930916258:web:89210233e6ba1004d262fb"});
 const db=getDatabase(_app);
 const auth=getAuth(_app);
 const fns=getFunctions(_app,"europe-west1");
@@ -11,11 +11,12 @@ const fnSetPin=httpsCallable(fns,"setPin");
 const fnHasPins=httpsCallable(fns,"hasPins");
 let _authReady=false,_authUid=null;
 onAuthStateChanged(auth,u=>{_authUid=u?u.uid:null;_authReady=true;});
-const _authP=signInAnonymously(auth).catch(e=>{console.warn("Auth failed",e);return null;});
-let GK=atob("QUl6YVN5QTM4Y1l6alRDdWgzV1BYZ1ZXRzZibk5BaXlnd3E5ZlE4");
+let _authFailed=false;
+const _authP=signInAnonymously(auth).catch(e=>{console.warn("Auth failed",e);_authFailed=true;return null;});
+let GK=atob("c2stYW50LWFwaTAzLUljUFJkNEh4dXh5c2d1cUZrVkdKMjVqdnZ2Z1psWWVJZEVtbC1JVHZ6bDVqSEFwMUZ1bjlIVlVVMjk3d3E1TmdQSVc5WVp3Z1RQdjJFbnh4VVFVX3BnLVFUQ1dVUVFBQQ==");
 
 // === Offline persistence with AES-GCM encryption ===
-const _aesSalt=new TextEncoder().encode("mak_aes_"+location.hostname);
+const _aesSalt=new TextEncoder().encode("mak_aes_unit-e-1d07b");
 let _aesKey=null;
 async function _getAesKey(){
   if(_aesKey)return _aesKey;
@@ -94,7 +95,6 @@ dl:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentC
 chk:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
 };
 
-const PINS={};
 const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"},4:{label:"Critical",cls:"critical"}};
 const cc=c=>CC[c]||CC[4];
 const _testIOS=window.location.search.includes("testios");
@@ -147,19 +147,7 @@ function openInstallPrompt(){
   else hint.textContent="Open the browser menu (three dots) and choose Add to Home screen.";
 }
 
-const SEED_M=[{name:"\u062e\u0627\u0644\u062f \u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f",civil:"264100700097",nat:"\u0623\u0631\u062f\u0646\u064a",ward:"W14",code:4,notes:""},{name:"\u0639\u0628\u062f\u0627\u0644\u0644\u0647 \u0645\u062d\u0645\u0648\u062f \u0627\u0644\u0646\u062c\u0627\u0631",civil:"233041500113",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W15",code:3,notes:""},{name:"\u0646\u0648\u0627\u0641 \u0646\u0633\u064a\u0645 \u0628\u0648\u0646\u0627\u0634\u064a",civil:"286122601564",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W20",code:4,notes:""},{name:"\u062d\u0633\u064a\u0646 \u0645\u0639\u0631\u0641\u0649 \u0635\u0641\u0631",civil:"240092800373",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W19R3",code:2,notes:""},{name:"\u0623\u0633\u0627\u0645\u0629 \u0645\u062d\u0645\u062f \u0639\u062b\u0645\u0627\u0646",civil:"272031402984",nat:"\u0645\u0635\u0631\u064a",ward:"W22R17",code:1,notes:""},{name:"\u062d\u064a\u062f\u0631 \u0639\u0648\u0636 \u062d\u0633\u064a\u0646",civil:"244100400184",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W22R5",code:2,notes:""}];
-const SEED_F=[{name:"\u0641\u0648\u0632\u064a\u0629 \u0639\u0628\u062f\u0627\u0644\u0648\u0647\u0627\u0628",civil:"252072701341",nat:"\u0643\u0648\u064a\u062a\u064a\u0629",ward:"W25R15",code:2,notes:""},{name:"\u0641\u0627\u0637\u0645\u0629 \u0633\u0639\u064a\u062f",civil:"243020600288",nat:"\u064a\u0645\u0646\u064a\u0629",ward:"W25R16",code:3,notes:""},{name:"\u0648\u0641\u0627\u0621 \u0639\u0628\u062f\u0627\u0644\u062c\u0644\u064a\u0644",civil:"259091300342",nat:"\u0645\u0635\u0631\u064a\u0629",ward:"W25R11",code:4,notes:""}];
-
 let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:""};
-
-async function seedData(){
-  if(!navigator.onLine)return;
-  try{if(!(await get(ref(db,"patients/E_M"))).exists())for(const p of SEED_M)await push(ref(db,"patients/E_M"),{...p,ts:Date.now()});}
-  catch(e){console.warn("Seed E_M skipped",e);}
-  try{if(!(await get(ref(db,"patients/E_F"))).exists())for(const p of SEED_F)await push(ref(db,"patients/E_F"),{...p,ts:Date.now()});}
-  catch(e){console.warn("Seed E_F skipped",e);}
-  // PINs are managed via admin panel only — no default seeding
-}
 async function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;
   // Load cached data immediately
   const cached=await LS.load("patients_"+uid);
@@ -184,7 +172,7 @@ const app=$("app");
 function toast(m,t="ok"){const e=$("toast");e.className="toast "+t;e.textContent=m;requestAnimationFrame(()=>requestAnimationFrame(()=>e.classList.add("show")));clearTimeout(window._tt);window._tt=setTimeout(()=>e.classList.remove("show"),2500);}
 function mask(c){if(!c||c.length<6)return c||"";return c.slice(0,3)+"\u2022".repeat(c.length-6)+c.slice(-3);}
 function filtered(){let l=[...S.patients];if(S.filter==="1")l=l.filter(p=>p.code==1);else if(S.filter==="2")l=l.filter(p=>p.code==2);else if(S.filter==="r")l=l.filter(p=>p.code>=3);if(S.search){const q=S.search.toLowerCase();l=l.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.civil||"").includes(q)||(p.ward||"").toLowerCase().includes(q));}return l.sort((a,b)=>b.code-a.code);}
-function confirm2(title,msg){return new Promise(res=>{const r=$("cr");r.innerHTML='<div class="c-overlay"><div class="modal"><div style="font-size:15px;font-weight:800;margin-bottom:6px">'+title+'</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">'+msg+'</div><div style="display:flex;gap:8px"><button class="btn2" id="cn" style="flex:1">Cancel</button><button class="btnd" id="cy" style="flex:1">'+I.trash+' Delete</button></div></div></div>';$("cy").addEventListener("click",()=>{r.innerHTML="";res(true);});$("cn").addEventListener("click",()=>{r.innerHTML="";res(false);});});}
+function confirm2(title,msg){return new Promise(res=>{const r=$("cr");r.innerHTML='<div class="c-overlay"><div class="modal"><div style="font-size:15px;font-weight:800;margin-bottom:6px">'+esc(title)+'</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">'+esc(msg)+'</div><div style="display:flex;gap:8px"><button class="btn2" id="cn" style="flex:1">Cancel</button><button class="btnd" id="cy" style="flex:1">'+I.trash+' Delete</button></div></div></div>';$("cy").addEventListener("click",()=>{r.innerHTML="";res(true);});$("cn").addEventListener("click",()=>{r.innerHTML="";res(false);});});}
 
 const TO=5*60*1000;let _tmr;
 function _ul(){$("tr").innerHTML="";S.screen="home";S.unit=null;S.patients=[];S.showCivil={};render();}
@@ -209,7 +197,7 @@ function backupPNG(){
   cols.forEach((c,i)=>{ctx.fillText(c,x-4,y+hh/2);x-=cw[i];});y+=hh;
   const clr={1:"#10b981",2:"#f59e0b",3:"#ef4444",4:"#ef4444"};
   rows.forEach((row,ri)=>{ctx.fillStyle=ri%2?"#141c2e":"#0f172a";ctx.fillRect(10,y,tw-20,rh);ctx.font=fs+"px Inter,sans-serif";x=tw-10;row.forEach((cell,ci)=>{ctx.fillStyle=ci===5?clr[+cell]||"#e2e8f0":"#e2e8f0";let t=cell;const mw=cw[ci]-8;if(ctx.measureText(t).width>mw){while(ctx.measureText(t+"\u2026").width>mw&&t.length>1)t=t.slice(0,-1);t+="\u2026";}ctx.fillText(t,x-4,y+rh/2);x-=cw[ci];});y+=rh;});
-  const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="MedEvac_"+S.unit+".png";document.body.appendChild(a);a.click();document.body.removeChild(a);toast("Backup saved");
+  const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="MedEvac_"+S.unit+".png";document.body.appendChild(a);a.click();document.body.removeChild(a);audit("backup_export",S.unit,S.patients.length+" patients");toast("Backup saved");
 }
 
 function render(){
@@ -222,7 +210,7 @@ function render(){
 function vHome(){
   const cnt={};["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{cnt[u+"_"+g]=Object.keys(S.allData[u+"_"+g]||{}).length;}));
   const total=Object.values(cnt).reduce((a,b)=>a+b,0);
-  return'<div class="screen"><div class="hdr"><div class="hdr-c"><h1>MedEvac</h1><p>Mubarak Al-Kabeer Hospital</p></div><div class="badge '+(S.online?"badge-on":"badge-off")+'"><div class="ldot"></div>'+(S.online?"Online":"Offline")+'</div><button class="hbtn" id="ba">'+I.cog+'</button></div><div class="sp" style="padding:12px 14px 100px"><div class="hero"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;opacity:.4;font-weight:600">Total Patients</span><span style="font-size:9px;opacity:.25">'+new Date().toLocaleDateString("en",{month:"short",day:"numeric",year:"numeric"})+'</span></div><div style="font-size:38px;font-weight:900;letter-spacing:-2px">'+total+'</div><div style="font-size:11px;opacity:.3;margin-top:2px">All units</div></div>'+["A","B","C","D","E"].map(u=>'<div class="uc"><div class="uh"><span>Unit '+u+'</span><span>'+(cnt[u+"_M"]+cnt[u+"_F"])+'</span></div><div class="ub"><div class="ubtn female" data-unit="'+u+'_F"><div class="ubtn-ico">'+I.user+'</div><div class="ubtn-name">Female</div><div class="ubtn-cnt">'+cnt[u+"_F"]+'</div></div><div class="ubtn male" data-unit="'+u+'_M"><div class="ubtn-ico">'+I.user+'</div><div class="ubtn-name">Male</div><div class="ubtn-cnt">'+cnt[u+"_M"]+'</div></div></div></div>').join("")+'</div></div>';
+  return'<div class="screen"><div class="hdr"><div class="hdr-c"><h1>MedEvac</h1><p>Mubarak Al-Kabeer Hospital</p></div><div class="badge '+(_authFailed?"badge-off":S.online?"badge-on":"badge-off")+'"><div class="ldot"></div>'+(_authFailed?"Auth Error":S.online?"Online":"Offline")+'</div><button class="hbtn" id="ba">'+I.cog+'</button></div><div class="sp" style="padding:12px 14px 100px"><div class="hero"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:11px;opacity:.4;font-weight:600">Total Patients</span><span style="font-size:9px;opacity:.25">'+new Date().toLocaleDateString("en",{month:"short",day:"numeric",year:"numeric"})+'</span></div><div style="font-size:38px;font-weight:900;letter-spacing:-2px">'+total+'</div><div style="font-size:11px;opacity:.3;margin-top:2px">All units</div></div>'+["A","B","C","D","E"].map(u=>'<div class="uc"><div class="uh"><span>Unit '+u+'</span><span>'+(cnt[u+"_M"]+cnt[u+"_F"])+'</span></div><div class="ub"><div class="ubtn female" data-unit="'+u+'_F"><div class="ubtn-ico">'+I.user+'</div><div class="ubtn-name">Female</div><div class="ubtn-cnt">'+cnt[u+"_F"]+'</div></div><div class="ubtn male" data-unit="'+u+'_M"><div class="ubtn-ico">'+I.user+'</div><div class="ubtn-name">Male</div><div class="ubtn-cnt">'+cnt[u+"_M"]+'</div></div></div></div>').join("")+'</div></div>';
 }
 
 function vPin(){
@@ -264,10 +252,16 @@ function bindAll(){
   document.querySelectorAll(".pc").forEach(c=>c.addEventListener("click",()=>{const p=S.patients.find(x=>x._k===c.dataset.key);if(p){S.editP=p;S.editCode=p.code;S.screen="detail";render();}}));
   document.querySelectorAll("[data-cpick='e']").forEach(c=>c.addEventListener("click",()=>{S.editCode=+c.dataset.code;render();}));
   document.querySelectorAll("[data-cpick='a']").forEach(c=>c.addEventListener("click",()=>{S.addCode=+c.dataset.code;render();}));
-  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{bs.disabled=true;const data={...S.editP,ward:$("ew").value.trim(),code:S.editCode,notes:$("en").value.trim(),ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);audit("edit",S.unit,data.name);toast("Saved");}catch(e){await LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});await _offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}S.screen="ward";render();});
+  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{const ward=$("ew").value.trim(),notes=$("en").value.trim();if(ward.length>30){toast("Ward too long","err");return;}if(notes.length>500){toast("Notes too long","err");return;}bs.disabled=true;const data={...S.editP,ward,code:S.editCode,notes,ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);audit("edit",S.unit,data.name);toast("Saved");}catch(e){await LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});await _offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}S.screen="ward";render();});
   const bd=$("bd");if(bd)bd.addEventListener("click",async()=>{if(!await confirm2("Delete?","Remove \""+esc(S.editP.name)+"\"?"))return;try{await remove(ref(db,"patients/"+S.unit+"/"+S.editP._k));audit("delete",S.unit,S.editP.name);toast("Deleted");}catch(e){await LS.queueOp({type:"remove",path:"patients/"+S.unit+"/"+S.editP._k});await _offlineRemove(S.unit,S.editP._k);toast("Deleted offline","ok");}S.screen="ward";render();});
   const badd=$("badd");if(badd)badd.addEventListener("click",()=>{S.addCode=null;S.screen="add";render();});
   const bsa=$("bsa");if(bsa)bsa.addEventListener("click",async()=>{const n=$("an").value.trim(),c=$("ac").value.trim(),w=$("aw").value.trim(),nat=$("at").value.trim(),notes=$("ao").value.trim();if(!n||!c||!w||!S.addCode){toast("Fill required","err");return;}
+    if(n.length>200){toast("Name too long (max 200)","err");return;}
+    if(c.length>20){toast("Civil ID too long","err");return;}
+    if(!/^\d+$/.test(c)){toast("Civil ID must be numeric","err");return;}
+    if(w.length>30){toast("Ward too long","err");return;}
+    if(nat.length>50){toast("Nationality too long","err");return;}
+    if(notes.length>500){toast("Notes too long (max 500)","err");return;}
     // Duplicate detection by Civil ID
     const dup=S.patients.find(p=>p.civil&&p.civil===c);if(dup&&!confirm("Patient with Civil ID "+c+" already exists ("+dup.name+"). Add anyway?")){return;}bsa.disabled=true;const data={name:n,civil:c,nat,ward:w,code:S.addCode,notes,ts:Date.now()};try{await push(ref(db,"patients/"+S.unit),data);audit("add",S.unit,data.name);toast("Added");}catch(e){const offKey="off_"+Date.now();await LS.queueOp({type:"push",path:"patients/"+S.unit,data});await _offlineUpdate(S.unit,offKey,data);toast("Added offline","ok");}S.screen="ward";render();});
   document.querySelectorAll("[data-tab]").forEach(t=>t.addEventListener("click",()=>{S.adminTab=t.dataset.tab;render();}));
@@ -286,7 +280,7 @@ async function checkPin(){
     await fnVerifyPin({unit:S.pinTarget,pin:S.pinVal});
     // Success — server already logged audit
     S.pinFails=0;S.pinLockUntil=0;
-    if(S.pinTarget==="ADMIN"){S.adminPin=S.pinVal;S.screen="admin";S.adminTab="overview";await listenAll();}
+    if(S.pinTarget==="ADMIN"){S.adminPin=S.pinVal;S.screen="admin";S.adminTab="overview";audit("admin_access","ADMIN","");await listenAll();}
     else{S.screen="ward";S.filter="all";S.search="";S._bp=true;await listenUnit(S.pinTarget);}
     render();
   }catch(e){
@@ -302,13 +296,13 @@ async function checkPin(){
 function handleOCR(e){const files=Array.from(e.target.files);if(!files.length)return;S.ocrResults=[];S.ocrSel=[];S.ocrLoading=true;S.ocrImg=null;render();
 const readFile=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=ev=>ok({data:ev.target.result.split(",")[1],mime:f.type,url:ev.target.result});r.onerror=no;r.readAsDataURL(f);});
 (async()=>{try{const imgs=await Promise.all(files.map(readFile));S.ocrImg=imgs[0].url;render();
-const parts=[];imgs.forEach(im=>parts.push({inline_data:{mime_type:im.mime,data:im.data}}));
-parts.push({text:'Extract ALL patients from these images. Return ONLY a JSON array: [{"name":"Full Name","civil":"Civil ID number","nat":"Nationality","ward":"Ward/bed info","code":1,"notes":"any notes"}]. code: 1=green,2=yellow,3=red,4=critical. If no patients found return [].'});
+const content=[];imgs.forEach(im=>content.push({type:"image",source:{type:"base64",media_type:im.mime,data:im.data}}));
+content.push({type:"text",text:'Extract ALL patients from these images. Return ONLY a JSON array: [{"name":"Full Name","civil":"Civil ID number","nat":"Nationality","ward":"Ward/bed info","code":1,"notes":"any notes"}]. code: 1=green,2=yellow,3=red,4=critical. If no patients found return [].'});
 if(!GK){toast("API key missing","err");S.ocrLoading=false;render();return;}
-const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+GK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}]})});
-if(!res.ok){const errText=await res.text();console.error("Gemini API error:",res.status,errText);toast("API error "+res.status+": check console","err");S.ocrLoading=false;render();return;}
-const data=await res.json();console.log("Gemini response:",JSON.stringify(data).slice(0,500));
-const raw=data.candidates?.[0]?.content?.parts?.[0]?.text||"[]";const cleaned=raw.replace(/```json|```/g,"").trim();
+const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":GK,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6-20250514",max_tokens:4096,messages:[{role:"user",content}]})});
+if(!res.ok){const errText=await res.text();console.error("Claude API error:",res.status,errText);toast("API error "+res.status+": check console","err");S.ocrLoading=false;render();return;}
+const data=await res.json();console.log("Claude response:",JSON.stringify(data).slice(0,500));
+const raw=data.content?.[0]?.text||"[]";const cleaned=raw.replace(/```json|```/g,"").trim();
 S.ocrResults=JSON.parse(cleaned);if(!Array.isArray(S.ocrResults))S.ocrResults=[];
 S.ocrSel=S.ocrResults.map((_,i)=>i);if(!S.ocrResults.length)toast("No patients found","err");
 }catch(err){console.error("OCR error:",err);toast("OCR failed: "+err.message,"err");S.ocrResults=[];}
@@ -381,9 +375,9 @@ async function boot(){try{
   // Wait for anonymous auth before attaching Firebase listeners
   await _authP;
   // Fetch Gemini key after auth
-  get(ref(db,"config/geminiKey")).then(s=>{if(s.exists())GK=s.val();}).catch(()=>{});
-  await listenAll();S.screen="home";render();await seedData();if(navigator.onLine)await syncQueue();
-}catch(e){showFatal('<div style="padding:40px;color:red;font-size:14px;word-break:break-all"><b>Boot Error:</b><br>'+e.message+'<br><br>'+e.stack+'</div>');}}
+  get(ref(db,"config/claudeKey")).then(s=>{if(s.exists())GK=s.val();}).catch(()=>{});
+  await listenAll();S.screen="home";render();if(navigator.onLine)await syncQueue();
+}catch(e){showFatal("Boot Error: "+e.message);}}
 boot();
 
 // Service Worker registration

@@ -1,7 +1,10 @@
-function showFatal(html){
-  const app=document.getElementById("app");
-  if(app)app.innerHTML=html;
-  else document.body.insertAdjacentHTML("afterbegin",html);
+function showFatal(msg){
+  var div=document.createElement("div");
+  div.style.cssText="padding:40px;color:red;font-size:13px;word-break:break-all";
+  div.textContent=msg;
+  var app=document.getElementById("app");
+  if(app){app.textContent="";app.appendChild(div);}
+  else document.body.prepend(div);
 }
-window.onerror=function(m,s,l,c,e){showFatal('<div style="padding:40px;color:red;font-size:13px;word-break:break-all"><b>Error:</b> '+m+'<br>Line: '+l+'</div>');};
-window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;color:red;font-size:13px;word-break:break-all"><b>Promise Error:</b> '+(e.reason?.message||e.reason)+'</div>');};
+window.onerror=function(m,s,l){showFatal("Error: "+m+" (Line: "+l+")");};
+window.onunhandledrejection=function(e){showFatal("Promise Error: "+(e.reason&&e.reason.message||e.reason));};

@@ -1,4 +1,4 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const functions = require("firebase-functions/v1");
 const { initializeApp } = require("firebase-admin/app");
 const { getDatabase } = require("firebase-admin/database");
 
@@ -57,82 +57,79 @@ function verifyPin(pin, stored) {
   return false;
 }
 
-exports.verifyPin = onCall({ region: "europe-west1", cors: true }, async (request) => {
-  // Require authentication
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Must be authenticated");
+exports.verifyPin = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Must be authenticated");
   }
 
-  const { unit, pin } = request.data;
+  const { unit, pin } = data;
   const validUnits = /^(A_M|A_F|B_M|B_F|C_M|C_F|D_M|D_F|E_M|E_F|ADMIN)$/;
   if (!unit || !validUnits.test(unit)) {
-    throw new HttpsError("invalid-argument", "Invalid unit");
+    throw new functions.https.HttpsError("invalid-argument", "Invalid unit");
   }
   if (!pin || typeof pin !== "string" || pin.length < 4 || pin.length > 6) {
-    throw new HttpsError("invalid-argument", "Invalid PIN");
+    throw new functions.https.HttpsError("invalid-argument", "Invalid PIN");
   }
 
   // Rate limit by IP
-  const ip = request.rawRequest?.ip || request.auth.uid || "unknown";
+  const ip = context.rawRequest?.ip || context.auth.uid || "unknown";
   if (!checkRateLimit(ip)) {
-    throw new HttpsError("resource-exhausted", "Too many attempts. Try again later.");
+    throw new functions.https.HttpsError("resource-exhausted", "Too many attempts. Try again later.");
   }
 
   // Read stored PIN from database
   const snap = await db.ref("pins/" + unit).once("value");
   const stored = snap.val();
   if (!stored) {
-    throw new HttpsError("not-found", "PIN not configured for this unit");
+    throw new functions.https.HttpsError("not-found", "PIN not configured for this unit");
   }
 
   const match = verifyPin(pin, stored);
   if (!match) {
     recordFail(ip);
-    // Audit log
     await db.ref("audit").push({
       action: "login_fail",
       unit,
       ts: Date.now(),
-      uid: request.auth.uid || "anon",
+      uid: context.auth.uid || "anon",
     });
-    throw new HttpsError("permission-denied", "Wrong PIN");
+    throw new functions.https.HttpsError("permission-denied", "Wrong PIN");
   }
 
   resetFails(ip);
-  // Audit log
   await db.ref("audit").push({
     action: "login",
     unit,
     ts: Date.now(),
-    uid: request.auth.uid || "anon",
+    uid: context.auth.uid || "anon",
   });
 
   return { success: true, unit };
 });
 
 // Set/update a PIN (admin only — must verify ADMIN PIN first)
-exports.setPin = onCall({ region: "europe-west1", cors: true }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Must be authenticated");
+exports.setPin = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Must be authenticated");
   }
 
-  const { adminPin, unit, newPin } = request.data;
+  const { adminPin, unit, newPin } = data;
   const validUnits = /^(A_M|A_F|B_M|B_F|C_M|C_F|D_M|D_F|E_M|E_F|ADMIN)$/;
   if (!unit || !validUnits.test(unit)) {
-    throw new HttpsError("invalid-argument", "Invalid unit");
+    throw new functions.https.HttpsError("invalid-argument", "Invalid unit");
   }
   if (!newPin || typeof newPin !== "string" || newPin.length < 4 || newPin.length > 6) {
-    throw new HttpsError("invalid-argument", "PIN must be 4-6 digits");
+    throw new functions.https.HttpsError("invalid-argument", "PIN must be 4-6 digits");
   }
   if (!adminPin || typeof adminPin !== "string") {
-    throw new HttpsError("invalid-argument", "Admin PIN required");
+    throw new functions.https.HttpsError("invalid-argument", "Admin PIN required");
   }
 
   // Verify admin PIN
   const adminSnap = await db.ref("pins/ADMIN").once("value");
   const adminStored = adminSnap.val();
   if (!adminStored || !verifyPin(adminPin, adminStored)) {
-    throw new HttpsError("permission-denied", "Invalid admin PIN");
+    throw new functions.https.HttpsError("permission-denied", "Invalid admin PIN");
   }
 
   // Hash the new PIN with PBKDF2
@@ -145,16 +142,16 @@ exports.setPin = onCall({ region: "europe-west1", cors: true }, async (request) 
     action: "pin_change",
     unit,
     ts: Date.now(),
-    uid: request.auth.uid || "anon",
+    uid: context.auth.uid || "anon",
   });
 
   return { success: true };
 });
 
 // Check if a unit has a PIN configured (doesn't reveal the PIN)
-exports.hasPins = onCall({ region: "europe-west1", cors: true }, async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Must be authenticated");
+exports.hasPins = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Must be authenticated");
   }
 
   const snap = await db.ref("pins").once("value");

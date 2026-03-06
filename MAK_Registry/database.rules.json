@@ -1,6 +1,7 @@
 {
   "rules": {
     "patients": {
+      ".read": "auth != null",
       "$unit": {
         ".read": "auth != null",
         ".write": "auth != null",
