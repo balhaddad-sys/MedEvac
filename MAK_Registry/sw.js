@@ -1,8 +1,6 @@
-const CACHE = "mak-v6";
-const ASSETS = ["/manifest.json"];
+const CACHE = "mak-v7";
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -16,25 +14,13 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = e.request.url;
-  if (url.includes("firebasedatabase") || url.includes("googleapis") ||
-      url.includes("gstatic.com") || url.includes("generativelanguage")) return;
-
-  // Network-first for HTML pages — always get fresh content
-  if (e.request.mode === "navigate" || url.endsWith("/index.html") || url.endsWith("/")) {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) { const c = res.clone(); caches.open(CACHE).then(cache => cache.put(e.request, c)); }
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
+  // Never cache Firebase, API calls, or fonts
+  if (url.includes("firebase") || url.includes("googleapis") || url.includes("gstatic") || url.includes("generativelanguage")) return;
+  // Always network-first for HTML
+  if (e.request.mode === "navigate" || url.endsWith(".html") || url.endsWith("/")) {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
     return;
   }
-
-  // Cache-first for static assets
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-      if (res.ok) { const c = res.clone(); caches.open(CACHE).then(cache => cache.put(e.request, c)); }
-      return res;
-    }))
-  );
+  // Cache-first for other static assets
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
 });
