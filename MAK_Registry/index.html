@@ -163,6 +163,15 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 </style>
 </head>
 <body>
+<script>
+function showFatal(html){
+  const app=document.getElementById("app");
+  if(app)app.innerHTML=html;
+  else document.body.insertAdjacentHTML("afterbegin",html);
+}
+window.onerror=function(m,s,l,c,e){showFatal('<div style="padding:40px;color:red;font-size:13px;word-break:break-all"><b>Error:</b> '+m+'<br>Line: '+l+'</div>');};
+window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;color:red;font-size:13px;word-break:break-all"><b>Promise Error:</b> '+(e.reason?.message||e.reason)+'</div>');};
+</script>
 <div id="app"><div class="screen" style="align-items:center;justify-content:center"><div class="loader"></div></div></div>
 <div class="toast" id="toast"></div>
 <div id="cr"></div>
@@ -210,13 +219,19 @@ const SEED_F=[{name:"\u0641\u0648\u0632\u064a\u0629 \u0639\u0628\u062f\u0627\u06
 let S={screen:"home",unit:null,patients:[],allData:{},pins:{...PINS},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false};
 
 async function seedData(){
-  if(!(await get(ref(db,"patients/E_M"))).exists())for(const p of SEED_M)await push(ref(db,"patients/E_M"),{...p,ts:Date.now()});
-  if(!(await get(ref(db,"patients/E_F"))).exists())for(const p of SEED_F)await push(ref(db,"patients/E_F"),{...p,ts:Date.now()});
-  if(!(await get(ref(db,"pins"))).exists())await set(ref(db,"pins"),PINS);
+  if(!navigator.onLine)return;
+  try{if(!(await get(ref(db,"patients/E_M"))).exists())for(const p of SEED_M)await push(ref(db,"patients/E_M"),{...p,ts:Date.now()});}
+  catch(e){console.warn("Seed E_M skipped",e);}
+  try{if(!(await get(ref(db,"patients/E_F"))).exists())for(const p of SEED_F)await push(ref(db,"patients/E_F"),{...p,ts:Date.now()});}
+  catch(e){console.warn("Seed E_F skipped",e);}
+  try{if(!(await get(ref(db,"pins"))).exists())await set(ref(db,"pins"),PINS);}
+  catch(e){console.warn("Seed pins skipped",e);}
 }
 function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;S.patients=[];
-  onValue(ref(db,"patients/"+uid),snap=>{S.patients=Object.entries(snap.val()||{}).map(([k,v])=>({...v,_k:k}));if(S.screen==="ward")render();if(S._bp&&S.patients.length>0){S._bp=false;backupPNG();}});}
+  onValue(ref(db,"patients/"+uid),snap=>{S.patients=Object.entries(snap.val()||{}).map(([k,v])=>({...v,_k:k}));if(S.screen==="ward")render();if(S._bp&&S.patients.length>0){S._bp=false;setTimeout(()=>{try{backupPNG();}catch(e){console.warn("Backup failed",e);}},500);}});}
+let _listenAllDone=false;
 function listenAll(){
+  if(_listenAllDone)return;_listenAllDone=true;
   onValue(ref(db,"patients"),snap=>{S.allData=snap.val()||{};if(S.screen==="admin"||S.screen==="home")render();});
   onValue(ref(db,"pins"),snap=>{if(snap.exists())S.pins={...PINS,...snap.val()};});
 }
@@ -235,7 +250,6 @@ window._ul=()=>{$("tr").innerHTML="";S.screen="home";S.unit=null;S.patients=[];S
 
 const _pb=$("pb");
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&S.screen!=="home")_pb.classList.add("show");else _pb.classList.remove("show");});
-window.addEventListener("blur",()=>{if(S.screen!=="home")_pb.classList.add("show");});
 window.addEventListener("focus",()=>_pb.classList.remove("show"));
 document.addEventListener("contextmenu",e=>{if(S.screen!=="home")e.preventDefault();});
 window.addEventListener("beforeunload",()=>{S.patients=[];S.allData={};S.editP=null;});
@@ -251,15 +265,15 @@ function backupPNG(){
   let y=50;ctx.fillStyle="#1e293b";ctx.fillRect(10,y,tw-20,hh);ctx.fillStyle="#93c5fd";ctx.font="bold "+fs+"px Inter,sans-serif";let x=tw-10;
   cols.forEach((c,i)=>{ctx.fillText(c,x-4,y+hh/2);x-=cw[i];});y+=hh;
   const clr={1:"#10b981",2:"#f59e0b",3:"#ef4444",4:"#ef4444"};
-  rows.forEach((row,ri)=>{ctx.fillStyle=ri%2?"#141c2e":"#0f172a";ctx.fillRect(10,y,tw-20,rh);ctx.font=fs+"px Inter,sans-serif";x=tw-10;row.forEach((cell,ci)=>{ctx.fillStyle=ci===5?clr[+cell]||"#e2e8f0":"#e2e8f0";let t=cell;const mw=cw[ci]-8;while(ctx.measureText(t).width>mw&&t.length>1)t=t.slice(0,-1)+"\u2026";ctx.fillText(t,x-4,y+rh/2);x-=cw[ci];});y+=rh;});
+  rows.forEach((row,ri)=>{ctx.fillStyle=ri%2?"#141c2e":"#0f172a";ctx.fillRect(10,y,tw-20,rh);ctx.font=fs+"px Inter,sans-serif";x=tw-10;row.forEach((cell,ci)=>{ctx.fillStyle=ci===5?clr[+cell]||"#e2e8f0":"#e2e8f0";let t=cell;const mw=cw[ci]-8;if(ctx.measureText(t).width>mw){while(ctx.measureText(t+"\u2026").width>mw&&t.length>1)t=t.slice(0,-1);t+="\u2026";}ctx.fillText(t,x-4,y+rh/2);x-=cw[ci];});y+=rh;});
   const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="MedEvac_"+S.unit+".png";document.body.appendChild(a);a.click();document.body.removeChild(a);toast("Backup saved");
 }
 
 function render(){
-  let h="";const s=S.screen;
+  try{let h="";const s=S.screen;
   if(s==="home")h=vHome();else if(s==="pin")h=vPin();else if(s==="ward")h=vWard();
   else if(s==="detail")h=vDetail();else if(s==="add")h=vAdd();else if(s==="admin")h=vAdmin();
-  app.innerHTML=h;bindAll();resetT();
+  app.innerHTML=h;bindAll();resetT();}catch(e){console.error(e);}
 }
 
 function vHome(){
@@ -333,9 +347,20 @@ window.dismissInstall=()=>{const b=$("ibanner");if(b)b.classList.remove("show");
 window.addEventListener("online",()=>{S.online=true;render();});
 window.addEventListener("offline",()=>{S.online=false;render();});
 
-async function boot(){listenAll();await seedData();S.screen="home";render();}
+async function boot(){try{listenAll();S.screen="home";render();await seedData();}catch(e){showFatal('<div style="padding:40px;color:red;font-size:14px;word-break:break-all"><b>Boot Error:</b><br>'+e.message+'<br><br>'+e.stack+'</div>');}}
 boot();
 </script>
-<script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"}).then(r=>r.update());}</script>
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.getRegistrations()
+    .then(rs=>Promise.all(rs.map(r=>r.unregister())))
+    .catch(()=>{})
+    .finally(()=>{
+      navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
+        .then(r=>r.update())
+        .catch(err=>console.warn("Service worker registration failed",err));
+    });
+}
+</script>
 </body>
 </html>
