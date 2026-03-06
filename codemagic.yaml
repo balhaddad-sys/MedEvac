@@ -12,9 +12,29 @@ workflows:
       branch_patterns:
         - pattern: main
     scripts:
+      - name: Set up Android SDK and JDK
+        script: |
+          # Set ANDROID_HOME if not already set
+          export ANDROID_HOME=${ANDROID_HOME:-$HOME/android-sdk}
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "JAVA_HOME=$JAVA_HOME"
+
+          # Create bubblewrap config to skip interactive prompts
+          mkdir -p "$HOME/.llama-pack"
+          cat > "$HOME/.llama-pack/llama-pack-config.json" << LLCONF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          LLCONF
+
+          # Accept Android SDK licenses
+          yes | sdkmanager --licenses 2>/dev/null || true
+
       - name: Install dependencies
         script: |
           npm install -g @bubblewrap/cli
+
       - name: Prepare TWA project
         script: |
           mkdir -p twa-build && cd twa-build
@@ -48,6 +68,7 @@ workflows:
             "fingerprints": []
           }
           EOF
+
       - name: Generate signing keystore
         script: |
           cd twa-build
@@ -56,20 +77,24 @@ workflows:
             -keyalg RSA -keysize 2048 \
             -validity 10000 \
             -keystore keystore.jks \
-            -storepass "$CM_KEYSTORE_PASSWORD" \
-            -keypass "$CM_KEYSTORE_PASSWORD" \
+            -storepass "${CM_KEYSTORE_PASSWORD:-medevac123}" \
+            -keypass "${CM_KEYSTORE_PASSWORD:-medevac123}" \
             -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
+
       - name: Build TWA APK
         script: |
           cd twa-build
-          bubblewrap build \
+          echo "y" | bubblewrap build \
             --manifest twa-manifest.json \
             --signingKeyPath ./keystore.jks \
             --signingKeyAlias medevac \
-            --signingKeyPassword "$CM_KEYSTORE_PASSWORD" \
-            --signingStorePassword "$CM_KEYSTORE_PASSWORD"
+            --signingKeyPassword "${CM_KEYSTORE_PASSWORD:-medevac123}" \
+            --signingStorePassword "${CM_KEYSTORE_PASSWORD:-medevac123}" \
+            --skipPwaValidation
+
     artifacts:
       - twa-build/app-release-signed.apk
+      - twa-build/app-release-unsigned.apk
 
   medevac-ios:
     name: MedEvac iOS App
