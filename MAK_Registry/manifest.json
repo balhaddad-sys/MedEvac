@@ -1,14 +1,15 @@
 {
   "name": "MedEvac",
   "short_name": "MedEvac",
-  "description": "MedEvac - Mubarak Al-Kabeer Hospital Patient Registry",
+  "description": "MedEvac - Secure Patient Registry System",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f0f6ff",
-  "theme_color": "#1d4ed8",
+  "background_color": "#f8f9fc",
+  "theme_color": "#0a0a0f",
   "lang": "ar",
   "dir": "rtl",
+  "categories": ["medical"],
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

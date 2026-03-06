@@ -1,6 +1,17 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    "patients": {
+      "$unit": {
+        ".read": true,
+        ".write": true,
+        "$patient": {
+          ".validate": "newData.hasChildren(['name', 'civil', 'ward', 'code', 'ts'])"
+        }
+      }
+    },
+    "pins": {
+      ".read": true,
+      ".write": true
+    }
   }
 }
