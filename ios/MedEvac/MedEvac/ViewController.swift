@@ -1,7 +1,7 @@
 import UIKit
 import WebKit
 
-class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
+class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
 
     private var webView: WKWebView!
     private var splashView: UIView!
@@ -12,7 +12,7 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0) // #0a0f1e
+        view.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
 
         setupWebView()
         setupSplashScreen()
@@ -29,24 +29,36 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
-
-        // Allow service worker and local storage
         config.websiteDataStore = .default()
         config.preferences.javaScriptCanOpenWindowsAutomatically = false
-
-        // User agent suffix so the web app can detect native wrapper
         config.applicationNameForUserAgent = "MedEvac-iOS"
 
+        // GPU acceleration & performance
+        let prefs = WKWebpagePreferences()
+        prefs.allowsContentJavaScript = true
+        config.defaultWebpagePreferences = prefs
+
         webView = WKWebView(frame: view.bounds, configuration: config)
-        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        webView.scrollView.delegate = self
+
+        // Smooth scrolling
         webView.scrollView.bounces = true
+        webView.scrollView.alwaysBounceVertical = true
         webView.scrollView.contentInsetAdjustmentBehavior = .always
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.backgroundColor = .clear
+        webView.scrollView.decelerationRate = .normal
+        webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.showsHorizontalScrollIndicator = false
+
+        // Rendering
+        webView.isOpaque = true
+        webView.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
+        webView.scrollView.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
         webView.allowsBackForwardNavigationGestures = false
+
+        // Prevent overscroll rubber-banding on horizontal axis
+        webView.scrollView.alwaysBounceHorizontal = false
 
         // Pull to refresh
         let refreshControl = UIRefreshControl()
@@ -56,7 +68,6 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
 
         view.addSubview(webView)
 
-        // Safe area constraints
         webView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             webView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -79,11 +90,10 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         stack.spacing = 16
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        // App icon placeholder
         let iconLabel = UILabel()
         iconLabel.text = "+"
         iconLabel.font = UIFont.systemFont(ofSize: 48, weight: .bold)
-        iconLabel.textColor = UIColor(red: 0.31, green: 0.43, blue: 0.97, alpha: 1.0) // #4f6ef7
+        iconLabel.textColor = UIColor(red: 0.31, green: 0.43, blue: 0.97, alpha: 1.0)
         iconLabel.textAlignment = .center
 
         let titleLabel = UILabel()
@@ -109,7 +119,7 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     }
 
     private func hideSplash() {
-        UIView.animate(withDuration: 0.3) {
+        UIView.animate(withDuration: 0.4, delay: 0, options: .curveEaseOut) {
             self.splashView.alpha = 0
         } completion: { _ in
             self.splashView.removeFromSuperview()
@@ -140,14 +150,14 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     // MARK: - Loading
 
     private func loadApp() {
-        // Try loading from hosted URL first (gets latest version + service worker)
         if let url = URL(string: hostURL) {
-            webView.load(URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad))
+            var request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
+            request.timeoutInterval = 15
+            webView.load(request)
         }
     }
 
     private func loadLocalFallback() {
-        // Fallback to bundled HTML if network fails
         if let htmlPath = Bundle.main.path(forResource: "index", ofType: "html") {
             let htmlURL = URL(fileURLWithPath: htmlPath)
             webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
@@ -167,18 +177,45 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         hideSplash()
         offlineBanner.isHidden = true
 
-        // Inject viewport meta for safe areas
-        let safeAreaCSS = """
+        // Performance & smoothness optimizations injected into the web page
+        let injectCSS = """
         (function() {
+            // Viewport fit for safe areas
             var meta = document.querySelector('meta[name=viewport]');
             if (meta && !meta.content.includes('viewport-fit')) {
                 meta.content += ', viewport-fit=cover';
             }
+
+            // Safe area padding
             document.body.style.paddingTop = 'env(safe-area-inset-top)';
             document.body.style.paddingBottom = 'env(safe-area-inset-bottom)';
+
+            // Smoothness: GPU-accelerated scrolling, touch optimizations
+            var s = document.createElement('style');
+            s.textContent = `
+                * { -webkit-tap-highlight-color: transparent; }
+                html, body { -webkit-overflow-scrolling: touch; }
+                .slist, .sp { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+                .screen, .pc, .ucard, .ubtn, .btn, .ibtn, .stat, .co {
+                    -webkit-transform: translateZ(0);
+                    transform: translateZ(0);
+                    will-change: transform;
+                }
+                .pc, .ubtn, .btn, .ibtn {
+                    transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.15s ease !important;
+                }
+                .pc:active, .ubtn:active, .btn:active, .ibtn:active {
+                    transform: translateZ(0) scale(0.97) !important;
+                }
+                @keyframes fi {
+                    from { opacity: 0; transform: translateZ(0) translateY(6px); }
+                    to { opacity: 1; transform: translateZ(0) translateY(0); }
+                }
+            `;
+            document.head.appendChild(s);
         })();
         """
-        webView.evaluateJavaScript(safeAreaCSS, completionHandler: nil)
+        webView.evaluateJavaScript(injectCSS, completionHandler: nil)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -191,7 +228,6 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
 
     private func handleLoadError(_ error: Error) {
         let nsError = error as NSError
-        // NSURLErrorNotConnectedToInternet or NSURLErrorTimedOut
         if nsError.domain == NSURLErrorDomain &&
             (nsError.code == NSURLErrorNotConnectedToInternet ||
              nsError.code == NSURLErrorTimedOut ||
@@ -201,7 +237,7 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         }
     }
 
-    // Block external navigation (stay in-app)
+    // Block external navigation
     func webView(_ webView: WKWebView,
                  decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -211,20 +247,28 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
         }
 
         let host = url.host ?? ""
-        // Allow our host, firebase, google APIs, and local files
         if url.isFileURL ||
             host.contains("unit-e-1d07b.web.app") ||
             host.contains("firebaseio.com") ||
+            host.contains("firebasedatabase.app") ||
             host.contains("googleapis.com") ||
             host.contains("gstatic.com") ||
             host.contains("google.com") {
             decisionHandler(.allow)
         } else if navigationAction.navigationType == .linkActivated {
-            // Open external links in Safari
             UIApplication.shared.open(url)
             decisionHandler(.cancel)
         } else {
             decisionHandler(.allow)
+        }
+    }
+
+    // MARK: - UIScrollViewDelegate
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // Prevent horizontal scrolling
+        if scrollView.contentOffset.x != 0 {
+            scrollView.contentOffset.x = 0
         }
     }
 }
