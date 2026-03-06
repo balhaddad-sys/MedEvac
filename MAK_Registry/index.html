@@ -223,7 +223,40 @@ window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;colo
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getDatabase,ref,onValue,set,push,remove,get,off}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 const db=getDatabase(initializeApp({apiKey:"AIzaSyBuuSFWmjkDPiF-LNlZkjVcMDPK9sHyYEQ",authDomain:"unit-e-1d07b.firebaseapp.com",databaseURL:"https://unit-e-1d07b-default-rtdb.europe-west1.firebasedatabase.app",projectId:"unit-e-1d07b",storageBucket:"unit-e-1d07b.firebasestorage.app",messagingSenderId:"465930916288",appId:"1:465930916258:web:89210233e6ba1004d262fb"}));
-const GK="AIzaSyB77AmYjvIqPFNQZhzA7vtfspk_0MOHAnk";
+const GK="AIzaSyA38cYzjTCuh3WPXgVWG6bnNAiygwq9fQ8";
+
+// === Offline persistence ===
+const LS={
+  save(k,v){try{localStorage.setItem("mak_"+k,JSON.stringify(v));}catch(e){}},
+  load(k){try{const v=localStorage.getItem("mak_"+k);return v?JSON.parse(v):null;}catch(e){return null;}},
+  queueOp(op){const q=LS.load("queue")||[];q.push(op);LS.save("queue",q);},
+  getQueue(){return LS.load("queue")||[];},
+  clearQueue(){LS.save("queue",[]);}
+};
+
+function _offlineUpdate(uid,key,data){
+  const cached=LS.load("patients_"+uid)||{};cached[key]=data;LS.save("patients_"+uid,cached);
+  S.patients=Object.entries(cached).map(([k,v])=>({...v,_k:k}));
+  const all=LS.load("allData")||{};if(!all[uid])all[uid]={};all[uid][key]=data;LS.save("allData",all);S.allData=all;
+}
+function _offlineRemove(uid,key){
+  const cached=LS.load("patients_"+uid)||{};delete cached[key];LS.save("patients_"+uid,cached);
+  S.patients=Object.entries(cached).map(([k,v])=>({...v,_k:k}));
+  const all=LS.load("allData")||{};if(all[uid])delete all[uid][key];LS.save("allData",all);S.allData=all;
+}
+async function syncQueue(){
+  const q=LS.getQueue();if(!q.length)return;
+  const failed=[];
+  for(const op of q){
+    try{
+      if(op.type==="set")await set(ref(db,op.path),op.data);
+      else if(op.type==="remove")await remove(ref(db,op.path));
+      else if(op.type==="push")await push(ref(db,op.path),op.data);
+    }catch(e){failed.push(op);}
+  }
+  LS.save("queue",failed);
+  if(q.length>failed.length)toast("Synced "+(q.length-failed.length)+" changes");
+}
 
 const I={
 back:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>',
@@ -315,13 +348,20 @@ async function seedData(){
   try{if(!(await get(ref(db,"pins"))).exists())await set(ref(db,"pins"),PINS);}
   catch(e){console.warn("Seed pins skipped",e);}
 }
-function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;S.patients=[];
-  onValue(ref(db,"patients/"+uid),snap=>{S.patients=Object.entries(snap.val()||{}).map(([k,v])=>({...v,_k:k}));if(S.screen==="ward")render();if(S._bp&&S.patients.length>0){S._bp=false;setTimeout(()=>{try{backupPNG();}catch(e){console.warn("Backup failed",e);}},500);}});}
+function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;
+  // Load cached data immediately
+  const cached=LS.load("patients_"+uid);
+  S.patients=cached?Object.entries(cached).map(([k,v])=>({...v,_k:k})):[];
+  if(S.screen==="ward")render();
+  onValue(ref(db,"patients/"+uid),snap=>{const raw=snap.val()||{};LS.save("patients_"+uid,raw);S.patients=Object.entries(raw).map(([k,v])=>({...v,_k:k}));if(S.screen==="ward")render();if(S._bp&&S.patients.length>0){S._bp=false;setTimeout(()=>{try{backupPNG();}catch(e){console.warn("Backup failed",e);}},500);}});}
 let _listenAllDone=false;
 function listenAll(){
   if(_listenAllDone)return;_listenAllDone=true;
-  onValue(ref(db,"patients"),snap=>{S.allData=snap.val()||{};if(S.screen==="admin"||S.screen==="home")render();});
-  onValue(ref(db,"pins"),snap=>{if(snap.exists())S.pins={...PINS,...snap.val()};});
+  // Load cached data immediately for instant offline render
+  const cachedAll=LS.load("allData");if(cachedAll){S.allData=cachedAll;}
+  const cachedPins=LS.load("pins");if(cachedPins){S.pins={...PINS,...cachedPins};}
+  onValue(ref(db,"patients"),snap=>{S.allData=snap.val()||{};LS.save("allData",S.allData);if(S.screen==="admin"||S.screen==="home")render();});
+  onValue(ref(db,"pins"),snap=>{if(snap.exists()){const p=snap.val();S.pins={...PINS,...p};LS.save("pins",p);}});
 }
 
 const $=id=>document.getElementById(id);
@@ -409,10 +449,10 @@ function bindAll(){
   document.querySelectorAll(".pc").forEach(c=>c.addEventListener("click",()=>{const p=S.patients.find(x=>x._k===c.dataset.key);if(p){S.editP=p;S.editCode=p.code;S.screen="detail";render();}}));
   document.querySelectorAll("[data-cpick='e']").forEach(c=>c.addEventListener("click",()=>{S.editCode=+c.dataset.code;render();}));
   document.querySelectorAll("[data-cpick='a']").forEach(c=>c.addEventListener("click",()=>{S.addCode=+c.dataset.code;render();}));
-  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{bs.disabled=true;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),{...S.editP,ward:$("ew").value.trim(),code:S.editCode,notes:$("en").value.trim(),ts:Date.now()});toast("Saved");S.screen="ward";render();}catch(e){toast("Failed","err");bs.disabled=false;}});
-  const bd=$("bd");if(bd)bd.addEventListener("click",async()=>{if(!await confirm2("Delete?","Remove \""+S.editP.name+"\"?"))return;try{await remove(ref(db,"patients/"+S.unit+"/"+S.editP._k));toast("Deleted");S.screen="ward";render();}catch(e){toast("Failed","err");}});
+  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{bs.disabled=true;const data={...S.editP,ward:$("ew").value.trim(),code:S.editCode,notes:$("en").value.trim(),ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);toast("Saved");}catch(e){LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});_offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}S.screen="ward";render();});
+  const bd=$("bd");if(bd)bd.addEventListener("click",async()=>{if(!await confirm2("Delete?","Remove \""+S.editP.name+"\"?"))return;try{await remove(ref(db,"patients/"+S.unit+"/"+S.editP._k));toast("Deleted");}catch(e){LS.queueOp({type:"remove",path:"patients/"+S.unit+"/"+S.editP._k});_offlineRemove(S.unit,S.editP._k);toast("Deleted offline","ok");}S.screen="ward";render();});
   const badd=$("badd");if(badd)badd.addEventListener("click",()=>{S.addCode=null;S.screen="add";render();});
-  const bsa=$("bsa");if(bsa)bsa.addEventListener("click",async()=>{const n=$("an").value.trim(),c=$("ac").value.trim(),w=$("aw").value.trim(),nat=$("at").value.trim(),notes=$("ao").value.trim();if(!n||!c||!w||!S.addCode){toast("Fill required","err");return;}bsa.disabled=true;try{await push(ref(db,"patients/"+S.unit),{name:n,civil:c,nat,ward:w,code:S.addCode,notes,ts:Date.now()});toast("Added");S.screen="ward";render();}catch(e){toast("Failed","err");bsa.disabled=false;}});
+  const bsa=$("bsa");if(bsa)bsa.addEventListener("click",async()=>{const n=$("an").value.trim(),c=$("ac").value.trim(),w=$("aw").value.trim(),nat=$("at").value.trim(),notes=$("ao").value.trim();if(!n||!c||!w||!S.addCode){toast("Fill required","err");return;}bsa.disabled=true;const data={name:n,civil:c,nat,ward:w,code:S.addCode,notes,ts:Date.now()};try{await push(ref(db,"patients/"+S.unit),data);toast("Added");}catch(e){const offKey="off_"+Date.now();LS.queueOp({type:"push",path:"patients/"+S.unit,data});_offlineUpdate(S.unit,offKey,data);toast("Added offline","ok");}S.screen="ward";render();});
   document.querySelectorAll("[data-tab]").forEach(t=>t.addEventListener("click",()=>{S.adminTab=t.dataset.tab;render();}));
   const oz=$("oz");if(oz)oz.addEventListener("click",()=>{const f=$("of");if(f)f.click();});
   const of_=$("of");if(of_)of_.addEventListener("change",handleOCR);
@@ -424,7 +464,7 @@ function bindAll(){
 
 function checkPin(){const c=S.pins[S.pinTarget]||PINS[S.pinTarget];if(S.pinVal===c){if(S.pinTarget==="ADMIN"){S.screen="admin";S.adminTab="overview";listenAll();}else{S.screen="ward";S.filter="all";S.search="";S._bp=true;listenUnit(S.pinTarget);}render();}else{S.pinError=true;S.pinVal="";render();}}
 
-function handleOCR(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async ev=>{S.ocrImg=ev.target.result;S.ocrB64=ev.target.result.split(",")[1];S.ocrResults=[];S.ocrSel=[];S.ocrLoading=true;render();try{const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key="+GK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:file.type,data:S.ocrB64}},{text:'Extract ALL patients. Return ONLY JSON array: [{\"name\":\"\",\"civil\":\"\",\"nat\":\"\",\"ward\":\"\",\"code\":1,\"notes\":\"\"}]. 1=green,2=yellow,3=red,4=critical.'}]}]})});const data=await res.json();S.ocrResults=JSON.parse((data.candidates?.[0]?.content?.parts?.[0]?.text||"[]").replace(/```json|```/g,"").trim());S.ocrSel=S.ocrResults.map((_,i)=>i);}catch(err){toast("Failed","err");S.ocrResults=[];}S.ocrLoading=false;render();};reader.readAsDataURL(file);}
+function handleOCR(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async ev=>{S.ocrImg=ev.target.result;S.ocrB64=ev.target.result.split(",")[1];S.ocrResults=[];S.ocrSel=[];S.ocrLoading=true;render();try{const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+GK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:file.type,data:S.ocrB64}},{text:'Extract ALL patients from this image. Return ONLY a JSON array: [{"name":"Full Name","civil":"Civil ID number","nat":"Nationality","ward":"Ward/bed info","code":1,"notes":"any notes"}]. code: 1=green,2=yellow,3=red,4=critical. If no patients found return [].'}]}]})});if(!res.ok){const errText=await res.text();console.error("Gemini API error:",res.status,errText);toast("API error "+res.status,"err");S.ocrLoading=false;render();return;}const data=await res.json();console.log("Gemini response:",JSON.stringify(data).slice(0,500));const raw=data.candidates?.[0]?.content?.parts?.[0]?.text||"[]";const cleaned=raw.replace(/```json|```/g,"").trim();S.ocrResults=JSON.parse(cleaned);if(!Array.isArray(S.ocrResults))S.ocrResults=[];S.ocrSel=S.ocrResults.map((_,i)=>i);if(!S.ocrResults.length)toast("No patients found","err");}catch(err){console.error("OCR error:",err);toast("OCR failed: "+err.message,"err");S.ocrResults=[];}S.ocrLoading=false;render();};reader.readAsDataURL(file);}
 
 async function importOCR(){const uid=$("ou")?.value;if(!uid||!S.ocrSel.length)return;const b=$("oi");b.disabled=true;try{for(const i of S.ocrSel){const p=S.ocrResults[i];await push(ref(db,"patients/"+uid),{name:p.name||"",civil:p.civil||"",nat:p.nat||"",ward:p.ward||"",code:+p.code||2,notes:p.notes||"",ts:Date.now()});}toast("Imported "+S.ocrSel.length);S.ocrResults=[];S.ocrSel=[];S.ocrImg=null;render();}catch(e){toast("Failed","err");b.disabled=false;}}
 
@@ -440,7 +480,7 @@ window.addEventListener("beforeinstallprompt",e=>{
 });
 const ib=$("ib-btn");if(ib)ib.addEventListener("click",()=>showInstallGuide(true));
 window.dismissInstall=()=>{const b=$("ibanner");if(b)b.classList.remove("show");localStorage.setItem("mi","1");};
-window.addEventListener("online",()=>{S.online=true;render();});
+window.addEventListener("online",()=>{S.online=true;render();syncQueue();});
 window.addEventListener("offline",()=>{S.online=false;render();});
 const installGuidePrev=$("install-guide-prev");
 if(installGuidePrev)installGuidePrev.addEventListener("click",()=>advanceInstallGuide(-1));
@@ -453,7 +493,7 @@ if(installGuideClose)installGuideClose.addEventListener("click",hideInstallGuide
 const installGuideEl=$("install-guide");
 if(installGuideEl)installGuideEl.addEventListener("click",e=>{if(e.target===installGuideEl)hideInstallGuide();});
 
-async function boot(){try{listenAll();S.screen="home";render();await seedData();}catch(e){showFatal('<div style="padding:40px;color:red;font-size:14px;word-break:break-all"><b>Boot Error:</b><br>'+e.message+'<br><br>'+e.stack+'</div>');}}
+async function boot(){try{listenAll();S.screen="home";render();await seedData();if(navigator.onLine)syncQueue();}catch(e){showFatal('<div style="padding:40px;color:red;font-size:14px;word-break:break-all"><b>Boot Error:</b><br>'+e.message+'<br><br>'+e.stack+'</div>');}}
 boot();
 </script>
 <script>

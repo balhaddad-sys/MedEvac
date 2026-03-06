@@ -1,13 +1,29 @@
-const CACHE = "mak-v8";
+const CACHE = "mak-v10";
+
+const PRECACHE = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png",
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js",
+  "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+];
 
 self.addEventListener("install", e => {
+  e.waitUntil(
+    caches.open(CACHE).then(cache =>
+      cache.addAll(PRECACHE).catch(err => console.warn("Precache partial fail", err))
+    )
+  );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -16,12 +32,33 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = e.request.url;
-  if (url.includes("firebase") || url.includes("googleapis") || url.includes("gstatic") || url.includes("generativelanguage")) return;
-  // Always network-first for HTML
+
+  // Never cache realtime database connections or Gemini API
+  if (url.includes("firebasedatabase.app") || url.includes("firebaseio.com") || url.includes("generativelanguage")) return;
+
+  // Network-first for HTML (app updates)
   if (e.request.mode === "navigate" || url.endsWith(".html") || url.endsWith("/")) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
     return;
   }
-  // Cache-first for other static assets
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+
+  // Cache-first for all other assets (SDK, fonts, icons)
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => new Response("Offline", { status: 503 }));
+    })
+  );
 });
