@@ -257,7 +257,7 @@ window.addEventListener("beforeunload",()=>{S.patients=[];S.allData={};S.editP=n
 function backupPNG(){
   if(!S.unit||!S.patients.length)return;const pts=[...S.patients].sort((a,b)=>b.code-a.code);
   const cols=["#","Name","Civil ID","Nat","Ward","Code","Notes"],rows=pts.map((p,i)=>[""+(i+1),p.name||"",p.civil||"",p.nat||"",p.ward||"",""+p.code,p.notes||""]);
-  const cv=document.createElement("canvas"),ctx=cv.getContext("2d"),fs=14,pad=10,rh=fs+pad*2,hh=rh+4,cw=[40,180,100,80,80,50,160],tw=cw.reduce((a,b)=>a+b)+20,th=50+hh+rows.length*rh+20;
+  const cv=document.createElement("canvas"),ctx=cv.getContext("2d"),fs=14,pad=10,rh=fs+pad*2,hh=rh+4,cw=[40,160,130,70,70,50,140],tw=cw.reduce((a,b)=>a+b)+20,th=50+hh+rows.length*rh+20;
   cv.width=tw;cv.height=th;ctx.fillStyle="#0f172a";ctx.fillRect(0,0,tw,th);
   ctx.fillStyle="#38bdf8";ctx.font="bold 18px Inter,sans-serif";ctx.textAlign="right";ctx.textBaseline="middle";
   ctx.fillText("Unit "+S.unit[0]+" - "+(S.unit.endsWith("_F")?"F":"M"),tw-10,20);
