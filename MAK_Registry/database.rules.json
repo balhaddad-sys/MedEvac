@@ -2,8 +2,8 @@
   "rules": {
     "patients": {
       "$unit": {
-        ".read": true,
-        ".write": true,
+        ".read": "auth != null",
+        ".write": "auth != null",
         ".validate": "$unit.matches(/^[A-E]_(M|F)$/)",
         "$patient": {
           ".validate": "newData.hasChildren(['name', 'civil', 'ward', 'code', 'ts'])",
@@ -19,21 +19,24 @@
       }
     },
     "pins": {
-      ".read": true,
-      ".write": true,
+      ".read": "auth != null",
+      ".write": "auth != null",
       "$pin": {
         ".validate": "$pin.matches(/^(A_M|A_F|B_M|B_F|C_M|C_F|D_M|D_F|E_M|E_F|ADMIN)$/) && newData.isString() && (newData.val().length == 64 || (newData.val().length >= 4 && newData.val().length <= 6))"
       }
     },
     "config": {
-      ".read": true,
+      ".read": "auth != null",
       ".write": false
     },
     "audit": {
-      ".read": true,
-      ".write": true,
+      ".read": false,
+      ".write": "auth != null",
       "$entry": {
-        ".validate": "newData.hasChildren(['action', 'unit', 'ts']) && newData.child('action').isString() && newData.child('ts').isNumber()"
+        ".validate": "newData.hasChildren(['action', 'unit', 'ts']) && newData.child('action').isString() && newData.child('ts').isNumber()",
+        "$field": {
+          ".validate": "newData.isString() || newData.isNumber()"
+        }
       }
     },
     "$other": {
