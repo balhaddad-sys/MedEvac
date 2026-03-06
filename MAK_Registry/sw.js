@@ -1,4 +1,4 @@
-const CACHE = "mak-v16";
+const CACHE = "mak-v17";
 
 const PRECACHE = [
   "/",
@@ -37,8 +37,8 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = e.request.url;
 
-  // Never cache realtime database connections or Gemini API
-  if (url.includes("firebasedatabase.app") || url.includes("firebaseio.com") || url.includes("generativelanguage") || url.includes("cloudfunctions.net")) return;
+  // Never cache realtime database connections or API calls
+  if (url.includes("firebasedatabase.app") || url.includes("firebaseio.com") || url.includes("generativelanguage") || url.includes("anthropic.com") || url.includes("cloudfunctions.net")) return;
 
   // Network-first for HTML (app updates)
   if (e.request.mode === "navigate" || url.endsWith(".html") || url.endsWith("/")) {
