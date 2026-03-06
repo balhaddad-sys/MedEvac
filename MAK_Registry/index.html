@@ -793,7 +793,7 @@ function renderPin() {
     '<button class="pkey ' + (k==="\u232b"?"del":"") + '" data-pin="' + k + '">' + k + '</button>'
   ).join("")).join("");
 
-  return '<div class="screen no-select">' +
+  return '<div class="screen">' +
     '<div class="hdr">' +
       '<button class="ibtn" id="btn-back">' + icoBack + '</button>' +
       '<div style="flex:1;text-align:center">' +
@@ -1013,148 +1013,139 @@ function renderAdmin() {
   '</div>';
 }
 
-// ── BIND EVENTS ──────────────────────────────────────────────────────
+// ── EVENT DELEGATION (single listener, zero re-binding) ─────────────
+let _delegated = false;
 function bindEvents() {
-  document.querySelectorAll("[data-unit]").forEach(btn => {
-    btn.addEventListener("click", () => {
+  if (_delegated) {
+    // Only rebind search input (needs fresh reference after DOM swap)
+    const si = el("search-inp");
+    if (si && !si._bound) {
+      si._bound = true;
+      si.addEventListener("input", e => { S.search=e.target.value; render(); });
+    }
+    const of_ = el("ocr-file");
+    if (of_ && !of_._bound) { of_._bound = true; of_.addEventListener("change", handleOCRFile); }
+    return;
+  }
+  _delegated = true;
+
+  // Single click handler on app container
+  app.addEventListener("click", e => {
+    const t = e.target;
+    const btn = t.closest("[data-unit],[data-pin],[data-filt],[data-cpick],[data-tab],[data-ocr],[data-savepin],[data-key],.pc,#btn-admin,#btn-back,#btn-backup,#btn-dl-backup,#btn-add,#btn-save,#btn-save-add,#btn-delete,#toggle-civil,#ocr-zone,#ocr-selall,#ocr-import");
+    if (!btn) return;
+
+    const id = btn.id;
+
+    // Unit selection
+    if (btn.dataset.unit) {
       S.pinTarget = btn.dataset.unit;
       S.pinVal = ""; S.pinError = false;
-      S.screen = "pin"; render();
-    });
-  });
-
-  const ba = el("btn-admin");
-  if (ba) ba.addEventListener("click", () => {
-    S.pinTarget = "ADMIN"; S.pinVal = ""; S.pinError=false; S.screen="pin"; render();
-  });
-
-  const bb = el("btn-back");
-  if (bb) bb.addEventListener("click", () => {
-    if (S.screen==="ward"||S.screen==="admin") {
-      S.screen="home"; S.showCivil={}; S._backupReady=false; S._backupDataUrl=null;
-      render();
+      S.screen = "pin"; render(); return;
     }
-    else if (S.screen==="detail"||S.screen==="add") { S.screen="ward"; render(); }
-    else if (S.screen==="pin") { S.screen="home"; render(); }
-  });
 
-  const bkup = el("btn-backup");
-  if (bkup) bkup.addEventListener("click", () => generateBackupPNG());
-
-  const dlBackup = el("btn-dl-backup");
-  if (dlBackup) dlBackup.addEventListener("click", () => downloadBackup());
-
-  const tcivil = el("toggle-civil");
-  if (tcivil && S.editP) tcivil.addEventListener("click", (e) => {
-    e.stopPropagation();
-    S.showCivil[S.editP._k] = !S.showCivil[S.editP._k];
-    render();
-  });
-
-  document.querySelectorAll("[data-pin]").forEach(k => {
-    k.addEventListener("click", () => {
-      const v = k.dataset.pin;
+    // PIN pad
+    if (btn.dataset.pin !== undefined) {
+      const v = btn.dataset.pin;
       if (v==="\u232b") { S.pinVal=S.pinVal.slice(0,-1); }
       else if (S.pinVal.length<6) { S.pinVal+=v; }
       S.pinError=false;
       if (S.pinVal.length===4||(S.pins[S.pinTarget] && S.pins[S.pinTarget].length>4 && S.pinVal.length===6)) checkPin();
       else render();
-    });
-  });
+      return;
+    }
 
-  document.querySelectorAll("[data-filt]").forEach(f => {
-    f.addEventListener("click", () => { S.filter=f.dataset.filt; render(); });
-  });
+    // Filter tabs
+    if (btn.dataset.filt) { S.filter=btn.dataset.filt; render(); return; }
 
-  const si = el("search-inp");
-  if (si) si.addEventListener("input", e => { S.search=e.target.value; render(); });
+    // Code picker
+    if (btn.dataset.cpick) {
+      const code = parseInt(btn.dataset.code);
+      if (btn.dataset.cpick==="e") S.editCode=code;
+      else S.addCode=code;
+      render(); return;
+    }
 
-  document.querySelectorAll(".pc").forEach(c => {
-    c.addEventListener("click", () => {
-      const p = S.patients.find(x=>x._k===c.dataset.key);
-      if (p) { S.editP=p; S.editCode=p.code; S.screen="detail"; render(); }
-    });
-  });
+    // Admin tabs
+    if (btn.dataset.tab) { S.adminTab=btn.dataset.tab; render(); return; }
 
-  document.querySelectorAll("[data-cpick='e']").forEach(c => {
-    c.addEventListener("click", () => { S.editCode=parseInt(c.dataset.code); render(); });
-  });
-
-  document.querySelectorAll("[data-cpick='a']").forEach(c => {
-    c.addEventListener("click", () => { S.addCode=parseInt(c.dataset.code); render(); });
-  });
-
-  const bs = el("btn-save");
-  if (bs) bs.addEventListener("click", async () => {
-    bs.disabled=true;
-    const p = S.editP;
-    const updated = {...p, ward:el("e-ward").value.trim(), code:S.editCode, notes:el("e-notes").value.trim()};
-    try { await fbSave(S.unit, p._k, updated); toast("Saved successfully"); S.screen="ward"; render(); }
-    catch(e) { toast("Save failed","err"); bs.disabled=false; }
-  });
-
-  const bd = el("btn-delete");
-  if (bd) bd.addEventListener("click", async () => {
-    const confirmed = await confirmDialog(
-      "Delete Patient?",
-      "This will permanently remove \"" + S.editP.name + "\" from the registry. This action cannot be undone."
-    );
-    if (!confirmed) return;
-    try { await fbDel(S.unit, S.editP._k); toast("Patient deleted"); S.screen="ward"; render(); }
-    catch(e) { toast("Delete failed","err"); }
-  });
-
-  const ba2 = el("btn-add");
-  if (ba2) ba2.addEventListener("click", () => { S.addCode=null; S.screen="add"; render(); });
-
-  const bsa = el("btn-save-add");
-  if (bsa) bsa.addEventListener("click", async () => {
-    const name=el("a-name").value.trim(), civil=el("a-civil").value.trim(),
-          ward=el("a-ward").value.trim(), nat=el("a-nat").value.trim(),
-          notes=el("a-notes").value.trim();
-    if (!name||!civil||!ward||!S.addCode) { toast("Please fill all required fields","err"); return; }
-    bsa.disabled=true;
-    try {
-      await fbAdd(S.unit,{name,civil,nat,ward,code:S.addCode,notes});
-      toast("Patient added"); S.screen="ward"; render();
-    } catch(e) { toast("Failed to add","err"); bsa.disabled=false; }
-  });
-
-  document.querySelectorAll("[data-tab]").forEach(t => {
-    t.addEventListener("click", () => { S.adminTab=t.dataset.tab; render(); });
-  });
-
-  const oz = el("ocr-zone");
-  if (oz) oz.addEventListener("click", () => { const f = el("ocr-file"); if(f) f.click(); });
-  const of_ = el("ocr-file");
-  if (of_) of_.addEventListener("change", handleOCRFile);
-
-  document.querySelectorAll("[data-ocr]").forEach(c => {
-    c.addEventListener("click", () => {
-      const i=parseInt(c.dataset.ocr);
+    // OCR checkboxes
+    if (btn.dataset.ocr !== undefined) {
+      const i=parseInt(btn.dataset.ocr);
       if (S.ocrSel.includes(i)) S.ocrSel=S.ocrSel.filter(x=>x!==i);
       else S.ocrSel.push(i);
-      render();
-    });
-  });
+      render(); return;
+    }
 
-  const osa = el("ocr-selall");
-  if (osa) osa.addEventListener("click", () => {
-    S.ocrSel = S.ocrSel.length===S.ocrResults.length ? [] : S.ocrResults.map((_,i)=>i);
-    render();
-  });
-
-  const oi = el("ocr-import");
-  if (oi) oi.addEventListener("click", handleOCRImport);
-
-  document.querySelectorAll("[data-savepin]").forEach(btn => {
-    btn.addEventListener("click", async () => {
+    // Save pin
+    if (btn.dataset.savepin) {
       const uid=btn.dataset.savepin, val=el("pin-" + uid);
       const pinVal = val ? val.value.trim() : "";
       if (!pinVal||pinVal.length<4) { toast("PIN must be at least 4 digits","err"); return; }
-      try { await fbSetPin(uid,pinVal); S.pins[uid]=pinVal; toast("PIN saved"); }
-      catch(e) { toast("Failed to save PIN","err"); }
-    });
+      fbSetPin(uid,pinVal).then(()=>{ S.pins[uid]=pinVal; toast("PIN saved"); })
+        .catch(()=>toast("Failed to save PIN","err"));
+      return;
+    }
+
+    // Patient card
+    if (btn.dataset.key || btn.classList.contains("pc")) {
+      const card = btn.closest(".pc") || btn;
+      const key = card.dataset.key;
+      if (key) {
+        const p = S.patients.find(x=>x._k===key);
+        if (p) { S.editP=p; S.editCode=p.code; S.screen="detail"; render(); }
+      }
+      return;
+    }
+
+    // Button IDs
+    if (id==="btn-admin") {
+      S.pinTarget="ADMIN"; S.pinVal=""; S.pinError=false; S.screen="pin"; render();
+    } else if (id==="btn-back") {
+      if (S.screen==="ward"||S.screen==="admin") {
+        S.screen="home"; S.showCivil={}; S._backupReady=false; S._backupDataUrl=null; render();
+      } else if (S.screen==="detail"||S.screen==="add") { S.screen="ward"; render(); }
+      else if (S.screen==="pin") { S.screen="home"; render(); }
+    } else if (id==="btn-backup") {
+      generateBackupPNG();
+    } else if (id==="btn-dl-backup") {
+      downloadBackup();
+    } else if (id==="btn-add") {
+      S.addCode=null; S.screen="add"; render();
+    } else if (id==="btn-save") {
+      btn.disabled=true;
+      const p = S.editP;
+      const updated = {...p, ward:el("e-ward").value.trim(), code:S.editCode, notes:el("e-notes").value.trim()};
+      fbSave(S.unit, p._k, updated).then(()=>{ toast("Saved successfully"); S.screen="ward"; render(); })
+        .catch(()=>{ toast("Save failed","err"); btn.disabled=false; });
+    } else if (id==="btn-delete") {
+      confirmDialog("Delete Patient?",
+        "This will permanently remove \"" + S.editP.name + "\" from the registry. This action cannot be undone."
+      ).then(ok => {
+        if (!ok) return;
+        fbDel(S.unit, S.editP._k).then(()=>{ toast("Patient deleted"); S.screen="ward"; render(); })
+          .catch(()=>toast("Delete failed","err"));
+      });
+    } else if (id==="btn-save-add") {
+      const name=el("a-name").value.trim(), civil=el("a-civil").value.trim(),
+            ward=el("a-ward").value.trim(), nat=el("a-nat").value.trim(),
+            notes=el("a-notes").value.trim();
+      if (!name||!civil||!ward||!S.addCode) { toast("Please fill all required fields","err"); return; }
+      btn.disabled=true;
+      fbAdd(S.unit,{name,civil,nat,ward,code:S.addCode,notes})
+        .then(()=>{ toast("Patient added"); S.screen="ward"; render(); })
+        .catch(()=>{ toast("Failed to add","err"); btn.disabled=false; });
+    } else if (id==="toggle-civil") {
+      e.stopPropagation();
+      if (S.editP) { S.showCivil[S.editP._k] = !S.showCivil[S.editP._k]; render(); }
+    } else if (id==="ocr-zone" || btn.closest("#ocr-zone")) {
+      const f = el("ocr-file"); if(f) f.click();
+    } else if (id==="ocr-selall") {
+      S.ocrSel = S.ocrSel.length===S.ocrResults.length ? [] : S.ocrResults.map((_,i)=>i);
+      render();
+    } else if (id==="ocr-import") {
+      handleOCRImport();
+    }
   });
 }
 
