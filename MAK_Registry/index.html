@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#0f172a">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.gstatic.com https://fonts.googleapis.com; frame-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com; script-src 'self' 'unsafe-inline' https://*.gstatic.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://*.gstatic.com https://generativelanguage.googleapis.com; font-src https://fonts.gstatic.com">
 <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
 <title>MedEvac</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -183,6 +184,19 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 .ocr-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
 .ocr-chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--acc);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
 .ocr-chk.on{background:var(--acc)}
+.ios-prompt{display:none;position:fixed;left:50%;transform:translateX(-50%);width:90%;max-width:340px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-radius:16px;padding:18px 20px;box-shadow:0 8px 40px rgba(0,0,0,.18);z-index:10000;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',sans-serif;border:.5px solid rgba(0,0,0,.08);animation:ios-fade .3s ease}
+@keyframes ios-fade{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.ios-prompt__hdr{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ios-prompt__icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#38bdf8);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ios-prompt__title{font-size:15px;font-weight:700;color:#1c1c1e;letter-spacing:-.2px}
+.ios-prompt__sub{font-size:12px;color:#8e8e93;margin-top:1px}
+.ios-prompt__close{position:absolute;top:12px;right:14px;background:rgba(0,0,0,.06);border:none;width:28px;height:28px;border-radius:14px;font-size:16px;color:#8e8e93;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ios-prompt__body{font-size:13px;color:#3a3a3c;line-height:1.5;margin-bottom:4px}
+.ios-prompt__body strong{color:#1c1c1e}
+.ios-prompt__share{display:inline-block;vertical-align:middle;width:18px;height:18px}
+.ios-prompt__arrow-up,.ios-prompt__arrow-down{display:none;position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent}
+.ios-prompt__arrow-up{top:-12px;border-bottom:12px solid rgba(255,255,255,.92)}
+.ios-prompt__arrow-down{bottom:-12px;border-top:12px solid rgba(255,255,255,.92)}
 </style>
 </head>
 <body>
@@ -221,6 +235,18 @@ window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;colo
     <button class="install-guide__cta" id="install-guide-now">Install Now</button>
     <div class="install-guide__hint" id="install-guide-hint"></div>
   </div>
+</div>
+<div class="ios-prompt" id="ios-prompt">
+  <div class="ios-prompt__arrow-up" id="ios-arrow-up"></div>
+  <div class="ios-prompt__hdr">
+    <div class="ios-prompt__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7-7 7 7"/></svg></div>
+    <div><div class="ios-prompt__title">Install MedEvac</div><div class="ios-prompt__sub">Works offline in emergencies</div></div>
+  </div>
+  <button class="ios-prompt__close" id="ios-prompt-close">&times;</button>
+  <div class="ios-prompt__body">
+    Tap <svg class="ios-prompt__share" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7-7 7 7"/><rect x="4" y="14" width="16" height="7" rx="2"/></svg> <strong>Share</strong> then scroll down and tap <strong>"Add to Home Screen"</strong>.
+  </div>
+  <div class="ios-prompt__arrow-down" id="ios-arrow-down"></div>
 </div>
 
 <script type="module">
@@ -280,8 +306,9 @@ chk:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" s
 const PINS={A_M:"1111",A_F:"1112",B_M:"2221",B_F:"2222",C_M:"3331",C_F:"3332",D_M:"4441",D_F:"4442",E_M:"5551",E_F:"5552",ADMIN:"0000"};
 const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"},4:{label:"Critical",cls:"red"}};
 const cc=c=>CC[c]||CC[4];
-const _isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
-const _isStandalone=window.navigator.standalone||window.matchMedia("(display-mode:standalone)").matches;
+const _testIOS=window.location.search.includes("testios");
+const _isIOS=_testIOS||/iphone|ipad|ipod/i.test(navigator.userAgent);
+const _isStandalone=!_testIOS&&(window.navigator.standalone||window.matchMedia("(display-mode:standalone)").matches);
 const installSteps=_isIOS?[
   {title:"Step 1 · Tap the Share button",desc:"Tap the Share icon (square with up arrow) at the bottom of Safari."},
   {title:"Step 2 · Add to Home Screen",desc:"Scroll down and tap “Add to Home Screen”."},
@@ -473,11 +500,30 @@ window.addEventListener("beforeinstallprompt",e=>{
     if(b)b.classList.add("show");
   },3000);
 });
-// iOS Safari: no beforeinstallprompt, so auto-show guide for first-time visitors
-if(_isIOS&&!_isStandalone&&!localStorage.getItem(installGuideKey)){
-  setTimeout(()=>{showInstallGuide();const b=$("ibanner");if(b&&!localStorage.getItem("mi"))b.classList.add("show");},2000);
+// iOS Safari: native-style prompt with Safari bar detection
+function showIOSPrompt(){
+  const p=$("ios-prompt");if(!p)return;
+  const au=$("ios-arrow-up"),ad=$("ios-arrow-down");
+  // Detect Safari bar position using visualViewport
+  const vv=window.visualViewport;
+  if(vv&&vv.offsetTop>10){
+    // Bar at TOP (older iOS or moved)
+    p.style.top="90px";p.style.bottom="auto";
+    if(au)au.style.display="block";if(ad)ad.style.display="none";
+  }else{
+    // Bar at BOTTOM (iOS 15+ default)
+    p.style.bottom="80px";p.style.top="auto";
+    if(ad)ad.style.display="block";if(au)au.style.display="none";
+  }
+  p.style.display="block";
 }
-const ib=$("ib-btn");if(ib)ib.addEventListener("click",()=>showInstallGuide(true));
+function hideIOSPrompt(){const p=$("ios-prompt");if(p)p.style.display="none";localStorage.setItem(installGuideKey,"1");}
+const iosClose=$("ios-prompt-close");if(iosClose)iosClose.addEventListener("click",hideIOSPrompt);
+
+if(_isIOS&&!_isStandalone&&(_testIOS||!localStorage.getItem(installGuideKey))){
+  setTimeout(showIOSPrompt,2000);
+}
+const ib=$("ib-btn");if(ib)ib.addEventListener("click",()=>{if(_isIOS){showIOSPrompt();}else{showInstallGuide(true);}});
 window.dismissInstall=()=>{const b=$("ibanner");if(b)b.classList.remove("show");localStorage.setItem("mi","1");};
 window.addEventListener("online",()=>{S.online=true;render();syncQueue();});
 window.addEventListener("offline",()=>{S.online=false;render();});
