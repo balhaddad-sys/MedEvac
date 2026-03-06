@@ -1,13 +1,17 @@
-const CACHE = "mak-v10";
+const CACHE = "mak-v13";
 
 const PRECACHE = [
   "/",
   "/index.html",
+  "/boot.js",
+  "/app.js",
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
   "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
   "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js",
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js",
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-functions.js",
   "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
 ];
 

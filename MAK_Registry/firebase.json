@@ -2,9 +2,13 @@
   "database": {
     "rules": "database.rules.json"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": {
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "database.rules.json"],
+    "ignore": ["firebase.json", "**/.*", "database.rules.json", "functions/**", "node_modules/**"],
     "rewrites": [
       { "source": "/privacy", "destination": "/privacy.html" },
       { "source": "/support", "destination": "/support.html" },

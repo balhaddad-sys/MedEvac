@@ -19,11 +19,8 @@
       }
     },
     "pins": {
-      ".read": "auth != null",
-      ".write": "auth != null",
-      "$pin": {
-        ".validate": "$pin.matches(/^(A_M|A_F|B_M|B_F|C_M|C_F|D_M|D_F|E_M|E_F|ADMIN)$/) && newData.isString() && (newData.val().length == 64 || (newData.val().length >= 4 && newData.val().length <= 6))"
-      }
+      ".read": false,
+      ".write": false
     },
     "config": {
       ".read": "auth != null",
