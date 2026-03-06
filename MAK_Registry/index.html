@@ -336,6 +336,6 @@ window.addEventListener("offline",()=>{S.online=false;render();});
 async function boot(){listenAll();await seedData();S.screen="home";render();}
 boot();
 </script>
-<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("/sw.js");</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister()));navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"}).then(r=>r.update());}</script>
 </body>
 </html>
