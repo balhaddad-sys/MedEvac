@@ -12,7 +12,7 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, UISc
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
+        view.backgroundColor = UIColor(red: 0.031, green: 0.043, blue: 0.078, alpha: 1.0)
 
         setupWebView()
         setupSplashScreen()
@@ -53,8 +53,8 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, UISc
 
         // Rendering
         webView.isOpaque = true
-        webView.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
-        webView.scrollView.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
+        webView.backgroundColor = UIColor(red: 0.031, green: 0.043, blue: 0.078, alpha: 1.0)
+        webView.scrollView.backgroundColor = UIColor(red: 0.031, green: 0.043, blue: 0.078, alpha: 1.0)
         webView.allowsBackForwardNavigationGestures = false
 
         // Prevent overscroll rubber-banding on horizontal axis
@@ -82,7 +82,7 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, UISc
     private func setupSplashScreen() {
         splashView = UIView(frame: view.bounds)
         splashView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        splashView.backgroundColor = UIColor(red: 0.039, green: 0.059, blue: 0.118, alpha: 1.0)
+        splashView.backgroundColor = UIColor(red: 0.031, green: 0.043, blue: 0.078, alpha: 1.0)
 
         let stack = UIStackView()
         stack.axis = .vertical

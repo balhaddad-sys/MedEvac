@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,21 +14,19 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 :root{
-  --pri:#0a0a0f;--pri2:#13131a;--pri3:#1a1a24;
-  --accent:#6366f1;--accent2:#818cf8;--accent-glow:rgba(99,102,241,.15);
-  --bg:#f8f9fc;--bg2:#eef0f5;--card:#ffffff;--card-hover:#fafbfe;
-  --text:#0f0f14;--text2:#2d2d3a;--muted:#8b8fa3;--muted2:#b0b4c8;
-  --border:#e5e7ee;--border2:#d4d7e3;
-  --g:#059669;--gbg:#ecfdf5;--gb:#6ee7b7;--g-glow:rgba(5,150,105,.1);
-  --y:#d97706;--ybg:#fffbeb;--yb:#fcd34d;--y-glow:rgba(217,119,6,.1);
-  --r:#dc2626;--rbg:#fef2f2;--rb:#fca5a5;--r-glow:rgba(220,38,38,.1);
-  --rad:20px;--rad-sm:14px;--rad-xs:10px;
-  --shadow-xs:0 1px 2px rgba(0,0,0,.03);
-  --shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.04);
-  --shadow-md:0 2px 8px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
-  --shadow-lg:0 4px 12px rgba(0,0,0,.05),0 16px 48px rgba(0,0,0,.08);
-  --shadow-glow:0 0 20px rgba(99,102,241,.08);
-  --transition:cubic-bezier(.22,1,.36,1);
+  --pri:#080b14;--pri2:#0f1321;--pri3:#161b2e;
+  --accent:#6366f1;--accent2:#818cf8;--accent-glow:rgba(99,102,241,.12);
+  --bg:#f4f6fa;--bg2:#ebeef5;--card:#ffffff;
+  --text:#0c0e16;--text2:#2a2d3e;--muted:#7c819a;--muted2:#a8adc4;
+  --border:#e2e5ef;--border2:#cdd1e0;
+  --g:#059669;--gbg:#ecfdf5;--gb:#86efac;--g-glow:rgba(5,150,105,.08);
+  --y:#d97706;--ybg:#fffbeb;--yb:#fcd34d;--y-glow:rgba(217,119,6,.08);
+  --r:#dc2626;--rbg:#fef2f2;--rb:#fca5a5;--r-glow:rgba(220,38,38,.08);
+  --rad:18px;--rad-sm:12px;--rad-xs:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.04);
+  --shadow-md:0 2px 8px rgba(0,0,0,.05),0 8px 28px rgba(0,0,0,.07);
+  --shadow-lg:0 4px 16px rgba(0,0,0,.06),0 20px 60px rgba(0,0,0,.1);
+  --ease:cubic-bezier(.22,1,.36,1);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);
@@ -36,266 +34,269 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 #app{display:flex;flex-direction:column;height:100%;height:100dvh;max-width:480px;margin:0 auto;
   background:var(--bg);position:relative;overflow:hidden}
-.screen{display:flex;flex-direction:column;height:100%;animation:screenIn .4s var(--transition) both;
-  will-change:transform,opacity;transform:translateZ(0)}
-@keyframes screenIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
-@keyframes screenOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-8px) scale(.99)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-@keyframes breathe{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 6px transparent}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-@keyframes shakeX{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
-@keyframes lockPulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.08);opacity:1}}
 
-/* HEADER - Premium frosted glass */
-.hdr{background:linear-gradient(135deg,var(--pri) 0%,var(--pri2) 50%,var(--pri3) 100%);
-  padding:max(env(safe-area-inset-top),16px) 20px 18px;
+/* PRIVACY: prevent selection on sensitive areas */
+.no-select{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+
+/* PRIVACY: blur overlay when app is backgrounded */
+#privacy-blur{position:fixed;inset:0;background:rgba(8,11,20,.97);backdrop-filter:blur(40px);
+  z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column}
+#privacy-blur.active{display:flex}
+#privacy-blur .pb-icon{width:64px;height:64px;border-radius:20px;
+  background:linear-gradient(135deg,var(--accent),#4f46e5);display:flex;align-items:center;justify-content:center;
+  margin-bottom:16px;box-shadow:0 8px 32px rgba(99,102,241,.3)}
+#privacy-blur .pb-text{color:rgba(255,255,255,.5);font-size:13px;font-weight:600}
+
+.screen{display:flex;flex-direction:column;height:100%;animation:screenIn .35s var(--ease) both;
+  will-change:transform,opacity;transform:translateZ(0)}
+@keyframes screenIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 5px transparent}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes shakeX{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+@keyframes lockPulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.06);opacity:1}}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* HEADER */
+.hdr{background:linear-gradient(145deg,var(--pri) 0%,var(--pri2) 60%,var(--pri3) 100%);
+  padding:max(env(safe-area-inset-top),14px) 20px 16px;
   color:#fff;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
   position:relative;z-index:10}
 .hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
-.htitle{font-size:18px;font-weight:800;letter-spacing:-.4px}
-.hsub{font-size:11px;opacity:.35;margin-top:2px;font-weight:500;letter-spacing:.3px}
-.hright{display:flex;gap:8px;align-items:center}
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent)}
+.htitle{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.hsub{font-size:10px;opacity:.3;margin-top:1px;font-weight:500;letter-spacing:.2px}
+.hright{display:flex;gap:6px;align-items:center}
 .ibtn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:var(--rad-sm);
-  width:40px;height:40px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all .25s var(--transition);position:relative;overflow:hidden}
-.ibtn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.1),transparent);
-  opacity:0;transition:opacity .25s}
-.ibtn:hover::before{opacity:1}
+  width:38px;height:38px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease);flex-shrink:0}
 .ibtn:active{transform:scale(.88);background:rgba(255,255,255,.12)}
-.opill{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:10px;font-weight:700;
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);letter-spacing:.3px;text-transform:uppercase}
+.opill{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:9px;font-weight:700;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);letter-spacing:.4px;text-transform:uppercase}
 .opill.on{color:#6ee7b7}.opill.off{color:#fca5a5}
-.odot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.odot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
 .odot.p{animation:breathe 2.5s ease-in-out infinite}
 
 /* STATS BAR */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);
   border-bottom:1px solid var(--border);flex-shrink:0}
-.stat{padding:16px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;
-  transition:all .25s var(--transition);position:relative}
+.stat{padding:14px 4px;text-align:center;border-left:1px solid var(--border);cursor:pointer;
+  transition:all .2s var(--ease);position:relative}
 .stat:last-child{border-left:none}
 .stat.act{background:var(--bg)}
-.stat.act::after{content:'';position:absolute;bottom:0;left:15%;right:15%;height:2.5px;border-radius:2px}
+.stat.act::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:2px;border-radius:2px}
 .st.act::after{background:var(--pri)}.sg.act::after{background:var(--g)}.sy.act::after{background:var(--y)}.sr.act::after{background:var(--r)}
-.sn{font-size:24px;font-weight:900;line-height:1;letter-spacing:-.5px}
-.sl{font-size:9px;color:var(--muted);margin-top:5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
-.st .sn{color:var(--pri)}.sg .sn{color:var(--g)}.sy .sn{color:var(--y)}.sr .sn{color:var(--r)}
+.sn{font-size:22px;font-weight:900;line-height:1;letter-spacing:-.5px}
+.sl{font-size:8px;color:var(--muted);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.st .sn{color:var(--text)}.sg .sn{color:var(--g)}.sy .sn{color:var(--y)}.sr .sn{color:var(--r)}
 
 /* TOOLBAR */
-.toolbar{padding:14px 16px;display:flex;gap:10px;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--border)}
-.si{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rad-sm);padding:12px 16px;
-  color:var(--text);font-family:inherit;font-size:14px;direction:rtl;outline:none;transition:all .25s var(--transition)}
-.si:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 4px var(--accent-glow)}
+.toolbar{padding:12px 16px;display:flex;gap:8px;flex-shrink:0;background:var(--card);border-bottom:1px solid var(--border)}
+.si{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rad-sm);padding:11px 14px;
+  color:var(--text);font-family:inherit;font-size:14px;direction:rtl;outline:none;transition:all .2s var(--ease)}
+.si:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-glow)}
 .si::placeholder{color:var(--muted2)}
 
-/* PATIENT CARD - Premium depth */
-.pc{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:18px;
-  display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer;
-  transition:transform .15s var(--transition),box-shadow .2s ease,border-color .2s ease;
-  position:relative;overflow:hidden;box-shadow:var(--shadow);transform:translateZ(0)}
-.pc:hover{box-shadow:var(--shadow-md);border-color:var(--border2)}
-.pc:active{transform:scale(.975);box-shadow:var(--shadow-xs)}
-.pstripe{position:absolute;right:0;top:0;bottom:0;width:4px;border-radius:0 4px 4px 0}
-.pbadge{width:52px;height:52px;border-radius:16px;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;flex-shrink:0;border:2px solid;font-weight:900;
-  transition:transform .3s var(--transition)}
-.pc:active .pbadge{transform:scale(.9)}
-.pn{font-size:14px;font-weight:700;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
-.pm{display:flex;gap:5px;flex-wrap:wrap}
-.chip{font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--rad-xs);padding:3px 10px;font-weight:600;letter-spacing:.1px}
-.pw{font-size:13px;font-weight:800;color:var(--accent);flex-shrink:0;
-  background:var(--accent-glow);padding:5px 12px;border-radius:var(--rad-xs);letter-spacing:.2px}
+/* PATIENT CARD */
+.pc{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:16px;
+  display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;
+  transition:transform .15s var(--ease),box-shadow .2s ease;
+  position:relative;overflow:hidden;box-shadow:var(--shadow);transform:translateZ(0);
+  animation:cardIn .3s var(--ease) both}
+.pc:nth-child(1){animation-delay:.02s}.pc:nth-child(2){animation-delay:.04s}
+.pc:nth-child(3){animation-delay:.06s}.pc:nth-child(4){animation-delay:.08s}
+.pc:nth-child(5){animation-delay:.1s}
+.pc:active{transform:scale(.975)}
+.pstripe{position:absolute;right:0;top:0;bottom:0;width:3.5px;border-radius:0 4px 4px 0}
+.pbadge{width:48px;height:48px;border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid;font-weight:900}
+.pn{font-size:14px;font-weight:700;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.pm{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:9.5px;color:var(--muted);background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--rad-xs);padding:2px 8px;font-weight:600}
+.pw{font-size:12px;font-weight:800;color:var(--accent);flex-shrink:0;
+  background:var(--accent-glow);padding:4px 10px;border-radius:var(--rad-xs);letter-spacing:.2px}
 .c1 .pstripe{background:var(--g)}.c1 .pbadge{color:var(--g);background:var(--gbg);border-color:var(--gb)}
 .c2 .pstripe{background:var(--y)}.c2 .pbadge{color:var(--y);background:var(--ybg);border-color:var(--yb)}
 .c3 .pstripe,.c4 .pstripe{background:var(--r)}.c3 .pbadge,.c4 .pbadge{color:var(--r);background:var(--rbg);border-color:var(--rb)}
 
-/* FORMS - Refined */
-.fg{margin-bottom:20px}
-.fl{font-size:11px;color:var(--muted);display:block;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+/* FORMS */
+.fg{margin-bottom:18px}
+.fl{font-size:10px;color:var(--muted);display:block;margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
 .fi{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:var(--rad-sm);
-  padding:14px 16px;color:var(--text);font-family:inherit;font-size:15px;direction:rtl;outline:none;
-  transition:all .25s var(--transition)}
-.fi:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-glow)}
+  padding:13px 14px;color:var(--text);font-family:inherit;font-size:15px;direction:rtl;outline:none;
+  transition:all .2s var(--ease)}
+.fi:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
 .fi::placeholder{color:var(--muted2)}
-.cpick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.co{border:2px solid var(--border);border-radius:16px;padding:16px 4px;text-align:center;
-  cursor:pointer;background:var(--card);transition:all .25s var(--transition)}
-.co:active{transform:scale(.9)}
-.co .cn{font-size:24px;font-weight:900;color:var(--muted)}
-.co .cl{font-size:10px;color:var(--muted);margin-top:4px;font-weight:700}
-.co.s1{border-color:var(--g);background:var(--gbg);box-shadow:0 0 12px var(--g-glow)}.co.s1 .cn{color:var(--g)}.co.s1 .cl{color:var(--g)}
-.co.s2{border-color:var(--y);background:var(--ybg);box-shadow:0 0 12px var(--y-glow)}.co.s2 .cn{color:var(--y)}.co.s2 .cl{color:var(--y)}
-.co.s3,.co.s4{border-color:var(--r);background:var(--rbg);box-shadow:0 0 12px var(--r-glow)}.co.s3 .cn,.co.s4 .cn{color:var(--r)}.co.s3 .cl,.co.s4 .cl{color:var(--r)}
+.cpick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.co{border:2px solid var(--border);border-radius:14px;padding:14px 4px;text-align:center;
+  cursor:pointer;background:var(--card);transition:all .2s var(--ease)}
+.co:active{transform:scale(.92)}
+.co .cn{font-size:22px;font-weight:900;color:var(--muted)}
+.co .cl{font-size:9px;color:var(--muted);margin-top:3px;font-weight:700}
+.co.s1{border-color:var(--g);background:var(--gbg)}.co.s1 .cn{color:var(--g)}.co.s1 .cl{color:var(--g)}
+.co.s2{border-color:var(--y);background:var(--ybg)}.co.s2 .cn{color:var(--y)}.co.s2 .cl{color:var(--y)}
+.co.s3,.co.s4{border-color:var(--r);background:var(--rbg)}.co.s3 .cn,.co.s4 .cn{color:var(--r)}.co.s3 .cl,.co.s4 .cl{color:var(--r)}
 
-/* BUTTONS - Premium */
+/* BUTTONS */
 .btn{width:100%;background:linear-gradient(135deg,var(--accent) 0%,#4f46e5 100%);color:#fff;border:none;
-  border-radius:16px;padding:16px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
-  transition:all .25s var(--transition);display:flex;align-items:center;justify-content:center;gap:8px;
-  box-shadow:0 4px 16px rgba(99,102,241,.25);position:relative;overflow:hidden}
-.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);
-  opacity:0;transition:opacity .25s}
-.btn:hover::before{opacity:1}
-.btn:active{transform:scale(.97);box-shadow:0 2px 8px rgba(99,102,241,.2)}
+  border-radius:14px;padding:15px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:all .2s var(--ease);display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 16px rgba(99,102,241,.2)}
+.btn:active{transform:scale(.97);box-shadow:0 2px 8px rgba(99,102,241,.15)}
 .btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none;transform:none}
 .btn-g{background:var(--card);color:var(--text);border:1.5px solid var(--border);box-shadow:var(--shadow)}
-.btn-g::before{display:none}
-.btn-d{background:var(--rbg);color:var(--r);border:1.5px solid var(--rb);padding:15px 20px;width:auto;box-shadow:none}
-.btn-d::before{display:none}
+.btn-d{background:var(--rbg);color:var(--r);border:1.5px solid var(--rb);padding:14px 18px;width:auto;box-shadow:none}
 
-/* PIN SCREEN - Premium */
+/* PIN SCREEN */
 .pin-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;
   padding:20px;background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);position:relative}
-.pin-screen::before{content:'';position:absolute;top:15%;left:50%;width:300px;height:300px;
+.pin-screen::before{content:'';position:absolute;top:10%;left:50%;width:280px;height:280px;
   background:radial-gradient(circle,var(--accent-glow),transparent 70%);transform:translateX(-50%);
-  pointer-events:none;opacity:.5}
-.pin-logo{width:72px;height:72px;border-radius:22px;
+  pointer-events:none;opacity:.6}
+.pin-logo{width:68px;height:68px;border-radius:20px;
   background:linear-gradient(135deg,var(--pri),var(--pri2));
-  display:flex;align-items:center;justify-content:center;margin-bottom:24px;
-  box-shadow:0 8px 32px rgba(10,10,15,.3),0 0 0 1px rgba(255,255,255,.05) inset;
-  animation:lockPulse 3s ease-in-out infinite}
-.pin-label{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:32px;letter-spacing:.3px}
-.pdisplay{display:flex;gap:20px;justify-content:center;margin-bottom:40px}
-.pdot2{width:15px;height:15px;border-radius:50%;border:2.5px solid var(--border);background:transparent;
-  transition:all .35s cubic-bezier(.34,1.56,.64,1)}
+  display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+  box-shadow:0 8px 32px rgba(8,11,20,.25);animation:lockPulse 3s ease-in-out infinite}
+.pin-label{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:28px}
+.pdisplay{display:flex;gap:18px;justify-content:center;margin-bottom:36px}
+.pdot2{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:transparent;
+  transition:all .3s cubic-bezier(.34,1.56,.64,1)}
 .pdot2.f{background:var(--accent);border-color:var(--accent);transform:scale(1.15);
-  box-shadow:0 0 12px var(--accent-glow)}
-.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:270px;margin:0 auto;width:100%}
-.pkey{background:rgba(255,255,255,.8);border:none;border-radius:50%;width:72px;height:72px;margin:0 auto;
-  text-align:center;font-size:26px;font-weight:600;cursor:pointer;transition:all .2s var(--transition);
+  box-shadow:0 0 10px var(--accent-glow)}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:260px;margin:0 auto;width:100%}
+.pkey{background:rgba(255,255,255,.85);border:none;border-radius:50%;width:68px;height:68px;margin:0 auto;
+  text-align:center;font-size:24px;font-weight:600;cursor:pointer;transition:all .15s var(--ease);
   color:var(--text);font-family:inherit;display:flex;align-items:center;justify-content:center;
-  box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+  box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .pkey:active{background:var(--bg2);transform:scale(.85);box-shadow:none}
 .pkey.del{font-size:14px;color:var(--muted);background:transparent;box-shadow:none}
-.pin-error{color:var(--r);font-weight:600;margin-bottom:16px;font-size:13px;animation:shakeX .5s ease}
+.pin-error{color:var(--r);font-weight:600;margin-bottom:14px;font-size:13px;animation:shakeX .4s ease}
 
-/* UNIT CARDS - Premium depth */
+/* UNIT CARDS */
 .ucard{background:var(--card);border:1px solid var(--border);border-radius:var(--rad);
-  overflow:hidden;box-shadow:var(--shadow);margin-bottom:12px;transition:all .3s var(--transition)}
-.ucard:hover{box-shadow:var(--shadow-md)}
+  overflow:hidden;box-shadow:var(--shadow);margin-bottom:10px;transition:all .2s var(--ease);
+  animation:cardIn .3s var(--ease) both}
+.ucard:nth-child(1){animation-delay:.02s}.ucard:nth-child(2){animation-delay:.05s}
+.ucard:nth-child(3){animation-delay:.08s}.ucard:nth-child(4){animation-delay:.11s}
+.ucard:nth-child(5){animation-delay:.14s}
 .ucard:active{transform:scale(.98)}
-.uhdr{background:linear-gradient(135deg,var(--pri) 0%,var(--pri2) 100%);
-  padding:16px 20px;color:#fff;font-weight:800;font-size:14px;
-  display:flex;justify-content:space-between;align-items:center;letter-spacing:-.2px;
+.uhdr{background:linear-gradient(145deg,var(--pri) 0%,var(--pri2) 100%);
+  padding:14px 18px;color:#fff;font-weight:800;font-size:13px;
+  display:flex;justify-content:space-between;align-items:center;
   position:relative;overflow:hidden}
-.uhdr::before{content:'';position:absolute;top:-50%;right:-30%;width:120px;height:120px;
-  background:radial-gradient(circle,rgba(99,102,241,.15),transparent 70%);pointer-events:none}
+.uhdr::before{content:'';position:absolute;top:-50%;right:-25%;width:100px;height:100px;
+  background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);pointer-events:none}
 .uwrap{display:grid;grid-template-columns:1fr 1fr}
-.ubtn{padding:22px 12px;text-align:center;cursor:pointer;transition:all .25s var(--transition);border:none;background:transparent}
+.ubtn{padding:20px 12px;text-align:center;cursor:pointer;transition:all .2s var(--ease);border:none;background:transparent}
 .ubtn:active{background:var(--bg)}
 .ubtn.male{border-left:1px solid var(--border)}
-.uico{margin-bottom:10px;color:var(--muted);opacity:.5}
-.uname{font-size:13px;font-weight:800;color:var(--text);letter-spacing:-.1px}
-.ucnt{display:inline-block;margin-top:10px;padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700}
-.male .ucnt{background:var(--accent-glow);color:var(--accent);border:1px solid rgba(99,102,241,.12)}
+.uico{margin-bottom:8px;color:var(--muted);opacity:.4}
+.uname{font-size:12px;font-weight:800;color:var(--text);letter-spacing:-.1px}
+.ucnt{display:inline-block;margin-top:8px;padding:4px 14px;border-radius:20px;font-size:10px;font-weight:700}
+.male .ucnt{background:var(--accent-glow);color:var(--accent);border:1px solid rgba(99,102,241,.1)}
 .female .ucnt{background:#fdf2f8;color:#be185d;border:1px solid #fce7f3}
 
 /* SCROLLABLE AREAS */
-.slist{flex:1;overflow-y:auto;padding:12px 16px 100px;-webkit-overflow-scrolling:touch;
+.slist{flex:1;overflow-y:auto;padding:10px 16px 100px;-webkit-overflow-scrolling:touch;
   scroll-behavior:smooth;transform:translateZ(0)}
 .slist::-webkit-scrollbar{display:none}
 .sp{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .sp::-webkit-scrollbar{display:none}
 
 /* INFO ROW */
-.ir{display:flex;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--border);font-size:14px;align-items:center}
-.ir:last-child{border-bottom:none;margin-bottom:8px}
+.ir{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;align-items:center}
+.ir:last-child{border-bottom:none;margin-bottom:6px}
 .ik{color:var(--muted);font-weight:600}.iv{font-weight:700;font-variant-numeric:tabular-nums}
 
 /* OCR */
-.ocr-zone{border:2px dashed var(--border);border-radius:var(--rad);padding:48px 20px;text-align:center;
-  cursor:pointer;transition:all .3s var(--transition);background:var(--card)}
+.ocr-zone{border:2px dashed var(--border);border-radius:var(--rad);padding:44px 20px;text-align:center;
+  cursor:pointer;transition:all .2s var(--ease);background:var(--card)}
 .ocr-zone:hover{border-color:var(--accent);background:var(--accent-glow)}
-.orow{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;
-  margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);
-  transition:all .25s var(--transition)}
-.orow:hover{box-shadow:var(--shadow-md)}
-.ochk{width:26px;height:26px;border-radius:var(--rad-xs);border:2px solid var(--accent);
+.orow{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;
+  margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.ochk{width:24px;height:24px;border-radius:var(--rad-xs);border:2px solid var(--accent);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;
-  transition:all .25s var(--transition)}
-.ochk.on{background:var(--accent);box-shadow:0 0 10px var(--accent-glow)}
+  transition:all .2s var(--ease)}
+.ochk.on{background:var(--accent);box-shadow:0 0 8px var(--accent-glow)}
 
 /* LOADER */
-.loader{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);
+.loader{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);
   border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
-.empty{text-align:center;padding:80px 20px;color:var(--muted);font-size:14px;font-weight:500}
-.empty svg{opacity:.25;margin-bottom:16px}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;font-weight:500}
+.empty svg{opacity:.2;margin-bottom:12px}
 
-/* TOAST - Premium */
+/* TOAST */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(80px);
-  padding:14px 28px;border-radius:16px;font-size:14px;font-weight:700;z-index:1000;
-  white-space:nowrap;transition:transform .4s var(--transition);
-  pointer-events:none;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1)}
+  padding:12px 24px;border-radius:14px;font-size:13px;font-weight:700;z-index:1000;
+  white-space:nowrap;transition:transform .35s var(--ease);
+  pointer-events:none;backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.08)}
 .toast.show{transform:translateX(-50%) translateY(0)}
-.toast.ok{background:rgba(10,10,15,.9);color:#fff;box-shadow:var(--shadow-lg)}
-.toast.err{background:rgba(220,38,38,.95);color:#fff;box-shadow:0 8px 32px rgba(220,38,38,.25)}
-.toast.warn{background:rgba(217,119,6,.95);color:#fff;box-shadow:0 8px 32px rgba(217,119,6,.25)}
+.toast.ok{background:rgba(8,11,20,.92);color:#fff;box-shadow:var(--shadow-lg)}
+.toast.err{background:rgba(220,38,38,.95);color:#fff}
+.toast.warn{background:rgba(217,119,6,.95);color:#fff}
 
 /* OFFLINE BAR */
 .offbar{background:var(--rbg);border-bottom:1px solid var(--rb);color:var(--r);
-  text-align:center;font-size:12px;font-weight:700;padding:10px;flex-shrink:0;display:none}
+  text-align:center;font-size:11px;font-weight:700;padding:8px;flex-shrink:0;display:none}
 .offbar.show{display:block}
 
 /* ADMIN TABS */
 .tabs{display:flex;gap:0;border-bottom:2px solid var(--border);flex-shrink:0;background:var(--card)}
-.tab{flex:1;padding:16px 4px;text-align:center;font-size:13px;font-weight:700;color:var(--muted);
-  cursor:pointer;border-bottom:2.5px solid transparent;transition:all .25s var(--transition);margin-bottom:-2px}
+.tab{flex:1;padding:14px 4px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;transition:all .2s var(--ease);margin-bottom:-2px}
 .tab.act{color:var(--accent);border-bottom-color:var(--accent)}
 
 /* INSTALL BANNER */
 .ibanner{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;
   background:linear-gradient(135deg,var(--pri),var(--pri2));
-  padding:18px 20px calc(18px + env(safe-area-inset-bottom));
-  display:flex;align-items:center;gap:14px;z-index:200;
-  transform:translateY(100%);transition:transform .5s var(--transition);
-  box-shadow:0 -8px 32px rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.05)}
+  padding:16px 18px calc(16px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:12px;z-index:200;
+  transform:translateY(100%);transition:transform .4s var(--ease);
+  box-shadow:0 -8px 32px rgba(0,0,0,.2);border-top:1px solid rgba(255,255,255,.04)}
 .ibanner.show{transform:translateY(0)}
-.ibanner-text strong{display:block;font-size:14px;font-weight:800;color:#fff}
-.ibanner-text span{font-size:12px;color:#94a3b8}
+.ibanner-text strong{display:block;font-size:13px;font-weight:800;color:#fff}
+.ibanner-text span{font-size:11px;color:#94a3b8}
 .ibanner-btn{background:#fff;color:var(--pri);border:none;border-radius:var(--rad-sm);
-  padding:12px 22px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;
-  box-shadow:0 2px 8px rgba(0,0,0,.1);transition:all .25s var(--transition)}
+  padding:10px 20px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
 .ibanner-btn:active{transform:scale(.95)}
-.ibanner-x{background:none;border:none;color:rgba(255,255,255,.3);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0}
+.ibanner-x{background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:4px;flex-shrink:0}
 
-/* SESSION TIMEOUT OVERLAY */
-.timeout-overlay{position:fixed;inset:0;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);
+/* SESSION TIMEOUT */
+.timeout-overlay{position:fixed;inset:0;background:rgba(8,11,20,.9);backdrop-filter:blur(24px);
   z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  animation:fadeUp .4s var(--transition)}
-.timeout-card{background:var(--card);border-radius:var(--rad);padding:40px 32px;text-align:center;
-  max-width:320px;width:90%;box-shadow:var(--shadow-lg)}
+  animation:fadeUp .35s var(--ease)}
+.timeout-card{background:var(--card);border-radius:var(--rad);padding:36px 28px;text-align:center;
+  max-width:300px;width:90%;box-shadow:var(--shadow-lg)}
 
-/* PRIVACY SHIELD */
+/* PRIVACY */
 .civil-masked{font-variant-numeric:tabular-nums;letter-spacing:1px}
-
-/* SCROLL FADE */
-.scroll-fade{position:relative}
-.scroll-fade::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60px;
-  background:linear-gradient(transparent,var(--bg));pointer-events:none;z-index:5}
-
-/* TOTAL CARD - Home */
-.total-card{background:linear-gradient(135deg,var(--pri) 0%,var(--pri2) 40%,var(--pri3) 100%);
-  border-radius:var(--rad);padding:24px;margin-bottom:20px;color:#fff;position:relative;overflow:hidden;
-  box-shadow:var(--shadow-lg)}
-.total-card::before{content:'';position:absolute;top:-40%;right:-20%;width:200px;height:200px;
-  background:radial-gradient(circle,rgba(99,102,241,.2),transparent 70%);pointer-events:none}
-.total-card::after{content:'';position:absolute;bottom:-30%;left:-10%;width:150px;height:150px;
-  background:radial-gradient(circle,rgba(99,102,241,.1),transparent 70%);pointer-events:none}
-
-/* PRIVACY BANNER */
-.privacy-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;
-  font-size:10px;font-weight:700;background:rgba(5,150,105,.06);color:var(--g);border:1px solid rgba(5,150,105,.12);
+.privacy-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;
+  font-size:9px;font-weight:700;background:rgba(5,150,105,.06);color:var(--g);border:1px solid rgba(5,150,105,.1);
   letter-spacing:.5px;text-transform:uppercase}
 
 /* CONFIRM DIALOG */
-.confirm-overlay{position:fixed;inset:0;background:rgba(10,10,15,.6);backdrop-filter:blur(12px);
-  z-index:400;display:flex;align-items:center;justify-content:center;animation:fadeUp .3s var(--transition)}
-.confirm-card{background:var(--card);border-radius:var(--rad);padding:32px 24px;text-align:center;
-  max-width:320px;width:90%;box-shadow:var(--shadow-lg)}
+.confirm-overlay{position:fixed;inset:0;background:rgba(8,11,20,.6);backdrop-filter:blur(12px);
+  z-index:400;display:flex;align-items:center;justify-content:center;animation:fadeUp .25s var(--ease)}
+.confirm-card{background:var(--card);border-radius:var(--rad);padding:28px 22px;text-align:center;
+  max-width:300px;width:90%;box-shadow:var(--shadow-lg)}
+
+/* TOTAL CARD */
+.total-card{background:linear-gradient(145deg,var(--pri) 0%,var(--pri2) 50%,var(--pri3) 100%);
+  border-radius:var(--rad);padding:22px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden;
+  box-shadow:var(--shadow-lg)}
+.total-card::before{content:'';position:absolute;top:-40%;right:-15%;width:160px;height:160px;
+  background:radial-gradient(circle,rgba(99,102,241,.15),transparent 70%);pointer-events:none}
+
+/* BACKUP BANNER */
+.backup-bar{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(99,102,241,.04));
+  border:1px solid rgba(99,102,241,.12);border-radius:var(--rad-sm);padding:10px 14px;
+  margin:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+  animation:fadeUp .3s var(--ease)}
+.backup-bar .bb-text{flex:1;font-size:11px;color:var(--accent);font-weight:700}
+.backup-bar .bb-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--rad-xs);
+  padding:6px 14px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.backup-bar .bb-btn:active{transform:scale(.95)}
 </style>
 </head>
 <body>
@@ -303,8 +304,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 <div class="toast" id="toast"></div>
 <div id="confirm-root"></div>
 <div id="timeout-root"></div>
+
+<!-- PRIVACY: blur overlay -->
+<div id="privacy-blur">
+  <div class="pb-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+  <div class="pb-text">MedEvac is locked</div>
+</div>
+
 <div class="ibanner" id="ibanner">
-  <div style="opacity:.6"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+  <div style="opacity:.6"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
   <div class="ibanner-text" style="flex:1">
     <strong>Install MedEvac</strong>
     <span>Add to home screen for instant access</span>
@@ -340,7 +348,7 @@ async function hashPin(pin) {
 }
 
 // ── PRIVACY: SESSION MANAGEMENT ─────────────────────────────────────
-const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const SESSION_TIMEOUT = 5 * 60 * 1000;
 let sessionTimer = null;
 let lastActivity = Date.now();
 
@@ -348,49 +356,68 @@ function resetSessionTimer() {
   lastActivity = Date.now();
   clearTimeout(sessionTimer);
   if (S.screen !== "home" && S.screen !== "pin") {
-    sessionTimer = setTimeout(() => {
-      showTimeoutOverlay();
-    }, SESSION_TIMEOUT);
+    sessionTimer = setTimeout(() => showTimeoutOverlay(), SESSION_TIMEOUT);
   }
 }
 
 function showTimeoutOverlay() {
   const root = document.getElementById("timeout-root");
-  root.innerHTML = `<div class="timeout-overlay" id="timeout-overlay">
+  root.innerHTML = `<div class="timeout-overlay">
     <div class="timeout-card">
-      <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,var(--pri),var(--pri2));
-        display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
-        box-shadow:0 4px 16px rgba(10,10,15,.2)">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+      <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--pri),var(--pri2));
+        display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
+        box-shadow:0 4px 16px rgba(8,11,20,.2)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </div>
-      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:8px">Session Expired</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5">
+      <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px">Session Expired</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5">
         For your privacy, the session has been locked due to inactivity.
       </div>
-      <button class="btn" onclick="lockSession()" style="max-width:200px;margin:0 auto">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        Return to Home
-      </button>
+      <button class="btn" onclick="lockSession()" style="max-width:200px;margin:0 auto">Return to Home</button>
     </div>
   </div>`;
 }
 
 window.lockSession = function() {
   document.getElementById("timeout-root").innerHTML = "";
-  S.screen = "home";
-  S.unit = null;
-  S.editP = null;
-  S.patients = [];
-  S.pinVal = "";
+  S.screen = "home"; S.unit = null; S.editP = null;
+  S.patients = []; S.pinVal = ""; S.showCivil = {};
   clearTimeout(sessionTimer);
   render();
 };
 
-// Track activity
 ["click","touchstart","keydown","scroll"].forEach(evt => {
   document.addEventListener(evt, resetSessionTimer, {passive:true});
+});
+
+// ── PRIVACY: APP BLUR ON BACKGROUND ─────────────────────────────────
+const privacyBlur = document.getElementById("privacy-blur");
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && S.screen !== "home") {
+    privacyBlur.classList.add("active");
+  } else {
+    privacyBlur.classList.remove("active");
+  }
+});
+window.addEventListener("blur", () => {
+  if (S.screen !== "home") privacyBlur.classList.add("active");
+});
+window.addEventListener("focus", () => {
+  privacyBlur.classList.remove("active");
+});
+
+// ── PRIVACY: PREVENT CONTEXT MENU & SCREENSHOTS ─────────────────────
+document.addEventListener("contextmenu", e => {
+  if (S.screen !== "home") e.preventDefault();
+});
+
+// Prevent copy of sensitive data
+document.addEventListener("copy", e => {
+  if (S.screen === "ward" || S.screen === "detail") {
+    e.preventDefault();
+    e.clipboardData.setData("text/plain", "");
+  }
 });
 
 // ── PRIVACY: DATA MASKING ───────────────────────────────────────────
@@ -403,24 +430,18 @@ function maskCivilId(civil) {
 function confirmDialog(title, message) {
   return new Promise(resolve => {
     const root = document.getElementById("confirm-root");
-    root.innerHTML = `<div class="confirm-overlay" id="confirm-overlay">
+    root.innerHTML = `<div class="confirm-overlay">
       <div class="confirm-card">
-        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">${title}</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5">${message}</div>
-        <div style="display:flex;gap:10px">
+        <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px">${title}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:20px;line-height:1.5">${message}</div>
+        <div style="display:flex;gap:8px">
           <button class="btn btn-g" id="confirm-no" style="flex:1">Cancel</button>
           <button class="btn btn-d" id="confirm-yes" style="flex:1">${icoTrash} Delete</button>
         </div>
       </div>
     </div>`;
-    document.getElementById("confirm-yes").addEventListener("click", () => {
-      root.innerHTML = "";
-      resolve(true);
-    });
-    document.getElementById("confirm-no").addEventListener("click", () => {
-      root.innerHTML = "";
-      resolve(false);
-    });
+    document.getElementById("confirm-yes").addEventListener("click", () => { root.innerHTML=""; resolve(true); });
+    document.getElementById("confirm-no").addEventListener("click", () => { root.innerHTML=""; resolve(false); });
   });
 }
 
@@ -479,7 +500,11 @@ let S = {
   ocrImg:null, ocrB64:null, ocrResults:[], ocrSel:[], ocrLoading:false,
   adminTab:"overview",
   unsub:null,
-  showCivil:{}, // privacy: track which civil IDs are revealed
+  showCivil:{},
+  _backupPending:false,
+  _backupReady:false,
+  _backupDataUrl:null,
+  _backupFilename:null,
 };
 
 // ── FIREBASE HELPERS ─────────────────────────────────────────────────
@@ -502,7 +527,7 @@ function listenUnit(uid) {
     if (S.screen==="ward") render();
     if (S._backupPending && S.patients.length > 0) {
       S._backupPending = false;
-      emergencyBackupPNG();
+      generateBackupPNG();
     }
   });
 }
@@ -544,29 +569,29 @@ function filtered() {
 }
 
 // ── SVG ICONS ────────────────────────────────────────────────────────
-const icoSave  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
-const icoTrash = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>';
-const icoSearch= '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
-const icoBack  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
-const icoPlus  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
-const icoCam   = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
-const icoChk   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-const icoCog   = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
-const icoShield = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
-const icoLock = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
-const icoEye = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-const icoEyeOff = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-const icoUser = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>';
+const icoSave  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>';
+const icoTrash = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>';
+const icoBack  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+const icoPlus  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+const icoCam   = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+const icoChk   = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const icoCog   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+const icoShield = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+const icoLock = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+const icoEye = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const icoEyeOff = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+const icoUser = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M12 12c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>';
+const icoDl = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
 
 // ── PATIENT CARD HTML ────────────────────────────────────────────────
 function pCardHTML(p) {
   const c = ccfg(p.code);
   const civilDisplay = S.showCivil[p._k] ? p.civil : maskCivilId(p.civil);
-  return '<div class="pc c' + p.code + '" data-key="' + p._k + '">' +
+  return '<div class="pc c' + p.code + ' no-select" data-key="' + p._k + '">' +
     '<div class="pstripe"></div>' +
     '<div class="pbadge">' +
-      '<span style="font-size:20px;font-weight:900">' + p.code + '</span>' +
-      '<span style="font-size:9px;margin-top:1px">' + c.label + '</span>' +
+      '<span style="font-size:18px;font-weight:900">' + p.code + '</span>' +
+      '<span style="font-size:8px;margin-top:1px">' + c.label + '</span>' +
     '</div>' +
     '<div style="flex:1;min-width:0">' +
       '<div class="pn">' + (p.name||"") + '</div>' +
@@ -589,7 +614,7 @@ function codePicker(selCode, prefix) {
 }
 
 // ── EMERGENCY BACKUP PNG ─────────────────────────────────────────────
-function emergencyBackupPNG() {
+function generateBackupPNG() {
   if (!S.unit) return;
   const patients = [...S.patients].sort((a,b) => b.code - a.code);
   if (!patients.length) return;
@@ -608,7 +633,7 @@ function emergencyBackupPNG() {
   const totalH = titleH + hdrH + rows.length * rowH + 20;
   cv.width = totalW; cv.height = totalH;
 
-  ctx.fillStyle = "#0a0a0f"; ctx.fillRect(0, 0, totalW, totalH);
+  ctx.fillStyle = "#080b14"; ctx.fillRect(0, 0, totalW, totalH);
 
   ctx.fillStyle = "#818cf8"; ctx.font = "bold 18px Inter, sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   const isF = S.unit.endsWith("_F");
@@ -629,7 +654,7 @@ function emergencyBackupPNG() {
   y += hdrH;
 
   rows.forEach((row, ri) => {
-    ctx.fillStyle = ri % 2 === 0 ? "#0f0f18" : "#14141e";
+    ctx.fillStyle = ri % 2 === 0 ? "#0c0f1a" : "#10131f";
     ctx.fillRect(10, y, totalW - 20, rowH);
     ctx.font = fs + "px Inter, sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
     x = totalW - 10;
@@ -645,13 +670,42 @@ function emergencyBackupPNG() {
     y += rowH;
   });
 
+  // Use fixed filename so it overwrites the previous one
+  const filename = "MedEvac_Unit" + S.unit[0] + "_" + (isF?"F":"M") + ".png";
   const dataUrl = cv.toDataURL("image/png");
+
+  // Store for manual download fallback
+  S._backupDataUrl = dataUrl;
+  S._backupFilename = filename;
+  S._backupReady = true;
+
+  // Attempt auto-download
+  try {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast("Backup saved: " + filename);
+  } catch(e) {
+    // If blocked, the banner will show a download button
+    S._backupReady = true;
+    render();
+  }
+}
+
+function downloadBackup() {
+  if (!S._backupDataUrl) return;
   const a = document.createElement("a");
-  a.href = dataUrl;
-  a.download = "MedEvac_Unit" + S.unit[0] + "_" + (S.unit.endsWith("_F")?"F":"M") + "_" + dateStr.replace(/[: ]/g,"_") + ".png";
+  a.href = S._backupDataUrl;
+  a.download = S._backupFilename || "MedEvac_Backup.png";
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  toast("Backup downloaded");
 }
 
 // ── RENDER ROUTER ────────────────────────────────────────────────────
@@ -683,18 +737,18 @@ function renderHome() {
     return '<div class="ucard">' +
       '<div class="uhdr">' +
         '<span>Unit ' + u + '</span>' +
-        '<span style="opacity:.5;font-size:12px;font-weight:600">' + (mCount+fCount) + ' patients</span>' +
+        '<span style="opacity:.4;font-size:11px;font-weight:600">' + (mCount+fCount) + ' patients</span>' +
       '</div>' +
       '<div class="uwrap">' +
         '<div class="ubtn female" data-unit="' + u + '_F">' +
           '<div class="uico">' + icoUser + '</div>' +
           '<div class="uname">Female</div>' +
-          '<div class="ucnt">' + fCount + ' patients</div>' +
+          '<div class="ucnt">' + fCount + '</div>' +
         '</div>' +
         '<div class="ubtn male" data-unit="' + u + '_M">' +
           '<div class="uico">' + icoUser + '</div>' +
           '<div class="uname">Male</div>' +
-          '<div class="ucnt">' + mCount + ' patients</div>' +
+          '<div class="ucnt">' + mCount + '</div>' +
         '</div>' +
       '</div>' +
     '</div>';
@@ -714,14 +768,14 @@ function renderHome() {
         '<div class="ibtn" id="btn-admin">' + icoCog + '</div>' +
       '</div>' +
     '</div>' +
-    '<div class="sp" style="padding:16px 16px 100px">' +
+    '<div class="sp" style="padding:14px 16px 100px">' +
       '<div class="total-card">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">' +
-          '<span style="font-size:13px;font-weight:600;opacity:.5">Total Patients</span>' +
-          '<span style="font-size:10px;font-weight:500;opacity:.3">' + new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) + '</span>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+          '<span style="font-size:12px;font-weight:600;opacity:.4">Total Patients</span>' +
+          '<span style="font-size:9px;font-weight:500;opacity:.25">' + new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) + '</span>' +
         '</div>' +
-        '<div style="font-size:42px;font-weight:900;letter-spacing:-2px;line-height:1">' + totalAll + '</div>' +
-        '<div style="font-size:12px;opacity:.4;margin-top:4px">Across all units</div>' +
+        '<div style="font-size:40px;font-weight:900;letter-spacing:-2px;line-height:1">' + totalAll + '</div>' +
+        '<div style="font-size:11px;opacity:.35;margin-top:3px">Across all units</div>' +
       '</div>' +
       unitCards +
     '</div>' +
@@ -739,22 +793,22 @@ function renderPin() {
     '<button class="pkey ' + (k==="\u232b"?"del":"") + '" data-pin="' + k + '">' + k + '</button>'
   ).join("")).join("");
 
-  return '<div class="screen">' +
+  return '<div class="screen no-select">' +
     '<div class="hdr">' +
       '<button class="ibtn" id="btn-back">' + icoBack + '</button>' +
       '<div style="flex:1;text-align:center">' +
         '<div class="htitle">' + (isAdmin ? "Admin Access" : "Unit " + unit + " \u2014 " + gender) + '</div>' +
       '</div>' +
-      '<div style="width:40px"></div>' +
+      '<div style="width:38px"></div>' +
     '</div>' +
     '<div class="pin-screen">' +
-      '<div class="pin-logo"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
+      '<div class="pin-logo"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
       '<div class="pin-label">Enter Security PIN</div>' +
       '<div class="pdisplay">' + dots + '</div>' +
       (S.pinError ? '<div class="pin-error">Incorrect PIN \u2014 try again</div>' : '') +
       '<div class="pinpad">' + pad + '</div>' +
-      '<div style="margin-top:32px;text-align:center">' +
-        '<div class="privacy-badge" style="font-size:9px">' + icoLock + ' End-to-end encrypted</div>' +
+      '<div style="margin-top:28px;text-align:center">' +
+        '<div class="privacy-badge" style="font-size:8px">' + icoLock + ' End-to-end encrypted</div>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -765,6 +819,15 @@ function renderWard() {
   const total=S.patients.length, g=S.patients.filter(p=>p.code==1).length,
         y=S.patients.filter(p=>p.code==2).length, r=S.patients.filter(p=>p.code>=3).length;
   const uid=S.unit, isF=uid && uid.endsWith("_F"), unit=uid && uid[0];
+
+  // Backup banner if ready
+  const backupBanner = S._backupReady ?
+    '<div class="backup-bar">' +
+      '<div style="color:var(--accent);opacity:.6">' + icoDl + '</div>' +
+      '<div class="bb-text">Emergency backup ready</div>' +
+      '<button class="bb-btn" id="btn-dl-backup">Download</button>' +
+    '</div>' : '';
+
   return '<div class="screen">' +
     '<div class="hdr">' +
       '<button class="ibtn" id="btn-back">' + icoBack + '</button>' +
@@ -773,11 +836,12 @@ function renderWard() {
         '<div class="hsub">Mubarak Al-Kabeer Hospital</div>' +
       '</div>' +
       '<div class="hright">' +
-        '<button class="ibtn" id="btn-backup" title="Download backup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>' +
+        '<button class="ibtn" id="btn-backup" title="Download backup">' + icoDl + '</button>' +
         '<div class="opill ' + (S.online?"on":"off") + '"><div class="odot ' + (S.online?"p":"") + '"></div></div>' +
       '</div>' +
     '</div>' +
     '<div class="offbar ' + (S.online?"":"show") + '">Offline \u2014 Data is local only</div>' +
+    backupBanner +
     '<div class="stats">' +
       '<div class="stat st ' + (S.filter==="all"?"act":"") + '" data-filt="all"><div class="sn">' + total + '</div><div class="sl">All</div></div>' +
       '<div class="stat sg ' + (S.filter==="1"?"act":"") + '" data-filt="1"><div class="sn">' + g + '</div><div class="sl">Green</div></div>' +
@@ -789,7 +853,7 @@ function renderWard() {
       '<button class="ibtn" id="btn-add" style="background:var(--accent);border-color:var(--accent);color:#fff">' + icoPlus + '</button>' +
     '</div>' +
     '<div class="slist" id="plist">' +
-      (list.length ? list.map(pCardHTML).join("") : '<div class="empty"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><div>No results found</div></div>') +
+      (list.length ? list.map(pCardHTML).join("") : '<div class="empty"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><div>No results found</div></div>') +
     '</div>' +
   '</div>';
 }
@@ -797,17 +861,17 @@ function renderWard() {
 function renderDetail() {
   const p = S.editP;
   const civilDisplay = S.showCivil[p._k] ? p.civil : maskCivilId(p.civil);
-  return '<div class="screen">' +
+  return '<div class="screen no-select">' +
     '<div class="hdr">' +
       '<button class="ibtn" id="btn-back">' + icoBack + '</button>' +
       '<div style="flex:1;min-width:0;margin:0 8px">' +
-        '<div class="htitle" style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + p.name + '</div>' +
+        '<div class="htitle" style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + p.name + '</div>' +
         '<div class="hsub">Patient Details</div>' +
       '</div>' +
     '</div>' +
-    '<div class="sp" style="padding:16px 16px 100px">' +
-      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:0 18px;margin-bottom:20px;box-shadow:var(--shadow)">' +
-        '<div class="ir"><span class="ik">Civil ID</span><span class="iv" style="display:flex;align-items:center;gap:8px"><span class="civil-masked">' + civilDisplay + '</span><button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="toggle-civil">' + (S.showCivil[p._k] ? icoEyeOff : icoEye) + '</button></span></div>' +
+    '<div class="sp" style="padding:14px 16px 100px">' +
+      '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad);padding:0 16px;margin-bottom:18px;box-shadow:var(--shadow)">' +
+        '<div class="ir"><span class="ik">Civil ID</span><span class="iv" style="display:flex;align-items:center;gap:6px"><span class="civil-masked">' + civilDisplay + '</span><button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="toggle-civil">' + (S.showCivil[p._k] ? icoEyeOff : icoEye) + '</button></span></div>' +
         '<div class="ir"><span class="ik">Nationality</span><span class="iv">' + (p.nat||"\u2014") + '</span></div>' +
       '</div>' +
       '<div class="fg"><label class="fl">Ward / Bed</label>' +
@@ -815,7 +879,7 @@ function renderDetail() {
       '<div class="fg"><label class="fl">Severity Code</label>' + codePicker(S.editCode,"e") + '</div>' +
       '<div class="fg"><label class="fl">Notes</label>' +
         '<input class="fi" id="e-notes" placeholder="Medical notes..." value="' + (p.notes||"") + '"></div>' +
-      '<div style="display:flex;gap:10px;margin-top:8px">' +
+      '<div style="display:flex;gap:8px;margin-top:6px">' +
         '<button class="btn" id="btn-save">' + icoSave + ' Save Changes</button>' +
         '<button class="btn btn-d" id="btn-delete">' + icoTrash + '</button>' +
       '</div>' +
@@ -828,9 +892,9 @@ function renderAdd() {
     '<div class="hdr">' +
       '<button class="ibtn" id="btn-back">' + icoBack + '</button>' +
       '<div style="flex:1;text-align:center"><div class="htitle">Add Patient</div></div>' +
-      '<div style="width:40px"></div>' +
+      '<div style="width:38px"></div>' +
     '</div>' +
-    '<div class="sp" style="padding:16px 16px 100px">' +
+    '<div class="sp" style="padding:14px 16px 100px">' +
       '<div class="fg"><label class="fl">Full Name *</label><input class="fi" id="a-name" placeholder="Patient full name" autocomplete="off"></div>' +
       '<div class="fg"><label class="fl">Civil ID *</label><input class="fi" id="a-civil" placeholder="Civil ID number" autocomplete="off" inputmode="numeric"></div>' +
       '<div class="fg"><label class="fl">Nationality</label><input class="fi" id="a-nat" placeholder="e.g. Kuwaiti, Egyptian..." autocomplete="off"></div>' +
@@ -846,7 +910,7 @@ function renderAdmin() {
   const tabs = [
     {id:"overview",label:"Overview"},
     {id:"ocr",label:"OCR Import"},
-    {id:"pins",label:"Security PINs"},
+    {id:"pins",label:"Security"},
   ];
   let content = "";
 
@@ -858,16 +922,15 @@ function renderAdmin() {
       const fList = Object.entries(fData).map(([k,v])=>({...v,_k:k}));
       const all   = [...mList,...fList];
       const g=all.filter(p=>p.code==1).length, y=all.filter(p=>p.code==2).length, r=all.filter(p=>p.code>=3).length;
-      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)">' +
-        '<div style="background:linear-gradient(135deg,var(--pri),var(--pri2));padding:16px 20px;color:#fff;font-weight:800;font-size:14px;display:flex;justify-content:space-between;position:relative;overflow:hidden">' +
-          '<span>Unit ' + u + '</span><span style="opacity:.4;font-size:12px">' + all.length + ' patients</span>' +
-          '<div style="position:absolute;top:-40%;right:-20%;width:100px;height:100px;background:radial-gradient(circle,rgba(99,102,241,.15),transparent 70%);pointer-events:none"></div>' +
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)">' +
+        '<div style="background:linear-gradient(145deg,var(--pri),var(--pri2));padding:14px 18px;color:#fff;font-weight:800;font-size:13px;display:flex;justify-content:space-between;position:relative;overflow:hidden">' +
+          '<span>Unit ' + u + '</span><span style="opacity:.35;font-size:11px">' + all.length + ' patients</span>' +
         '</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(4,1fr);padding:12px;gap:8px;text-align:center">' +
-          '<div><div style="font-size:20px;font-weight:900;color:var(--accent)">' + all.length + '</div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">All</div></div>' +
-          '<div><div style="font-size:20px;font-weight:900;color:var(--g)">' + g + '</div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Green</div></div>' +
-          '<div><div style="font-size:20px;font-weight:900;color:var(--y)">' + y + '</div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Yellow</div></div>' +
-          '<div><div style="font-size:20px;font-weight:900;color:var(--r)">' + r + '</div><div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Red</div></div>' +
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);padding:10px;gap:6px;text-align:center">' +
+          '<div><div style="font-size:18px;font-weight:900;color:var(--accent)">' + all.length + '</div><div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">All</div></div>' +
+          '<div><div style="font-size:18px;font-weight:900;color:var(--g)">' + g + '</div><div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Green</div></div>' +
+          '<div><div style="font-size:18px;font-weight:900;color:var(--y)">' + y + '</div><div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Yellow</div></div>' +
+          '<div><div style="font-size:18px;font-weight:900;color:var(--r)">' + r + '</div><div style="font-size:8px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Red</div></div>' +
         '</div>' +
       '</div>';
     }).join("");
@@ -877,15 +940,15 @@ function renderAdmin() {
     content =
       '<div class="ocr-zone" id="ocr-zone">' +
         '<input type="file" id="ocr-file" accept="image/*" capture="environment" style="display:none">' +
-        '<div style="margin-bottom:16px;opacity:.6">' + icoCam + '</div>' +
-        '<div style="font-weight:800;color:var(--text);margin-bottom:6px;font-size:15px">Capture or Upload Image</div>' +
-        '<div style="font-size:13px;color:var(--muted)">Patient list image \u2192 instant import</div>' +
+        '<div style="margin-bottom:14px;opacity:.5">' + icoCam + '</div>' +
+        '<div style="font-weight:800;color:var(--text);margin-bottom:4px;font-size:14px">Capture or Upload Image</div>' +
+        '<div style="font-size:12px;color:var(--muted)">Patient list image \u2192 instant import</div>' +
       '</div>' +
-      (S.ocrImg ? '<img src="' + S.ocrImg + '" style="width:100%;border-radius:16px;margin:14px 0;max-height:200px;object-fit:cover;box-shadow:var(--shadow-md)">' : '') +
-      (S.ocrLoading ? '<div style="text-align:center;padding:24px"><div class="loader"></div><p style="margin-top:14px;color:var(--muted);font-weight:600">Analyzing with Gemini AI...</p></div>' : '') +
-      (S.ocrResults.length ? 
-        '<div style="margin-top:14px">' +
-          '<div style="font-weight:800;font-size:14px;margin-bottom:10px;color:var(--text)">' +
+      (S.ocrImg ? '<img src="' + S.ocrImg + '" style="width:100%;border-radius:14px;margin:12px 0;max-height:180px;object-fit:cover;box-shadow:var(--shadow-md)">' : '') +
+      (S.ocrLoading ? '<div style="text-align:center;padding:20px"><div class="loader"></div><p style="margin-top:12px;color:var(--muted);font-weight:600;font-size:13px">Analyzing with Gemini AI...</p></div>' : '') +
+      (S.ocrResults.length ?
+        '<div style="margin-top:12px">' +
+          '<div style="font-weight:800;font-size:13px;margin-bottom:8px;color:var(--text)">' +
             'Detected ' + S.ocrResults.length + ' patients \u2014 select unit:' +
           '</div>' +
           '<div class="fg">' +
@@ -900,16 +963,16 @@ function renderAdmin() {
             '<div class="orow">' +
               '<div class="ochk ' + (S.ocrSel.includes(i)?"on":"") + '" data-ocr="' + i + '">' + (S.ocrSel.includes(i)?icoChk:"") + '</div>' +
               '<div style="flex:1;min-width:0">' +
-                '<div style="font-weight:700;font-size:14px">' + (p.name||"\u2014") + '</div>' +
-                '<div style="font-size:12px;color:var(--muted)">' + (p.civil||"") + ' \u00b7 ' + (p.ward||"") + '</div>' +
+                '<div style="font-weight:700;font-size:13px">' + (p.name||"\u2014") + '</div>' +
+                '<div style="font-size:11px;color:var(--muted)">' + (p.civil||"") + ' \u00b7 ' + (p.ward||"") + '</div>' +
               '</div>' +
-              '<div style="font-size:20px;font-weight:900;color:' + ccfg(p.code).color + '">' + p.code + '</div>' +
+              '<div style="font-size:18px;font-weight:900;color:' + ccfg(p.code).color + '">' + p.code + '</div>' +
             '</div>'
           ).join('') +
-          '<div style="display:flex;gap:10px;margin-top:14px">' +
+          '<div style="display:flex;gap:8px;margin-top:12px">' +
             '<button class="btn btn-g" id="ocr-selall">Select All</button>' +
             '<button class="btn" id="ocr-import" ' + (S.ocrSel.length===0?"disabled":"") + '>' +
-              icoPlus + ' Import ' + S.ocrSel.length + ' patients' +
+              icoPlus + ' Import ' + S.ocrSel.length +
             '</button>' +
           '</div>' +
         '</div>' : '');
@@ -925,14 +988,14 @@ function renderAdmin() {
       ADMIN:"Administrator"
     };
     content =
-      '<div style="background:var(--rbg);border:1px solid var(--rb);border-radius:var(--rad-sm);padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--r);font-weight:600;display:flex;align-items:center;gap:8px">' +
-        icoLock + ' Keep these PINs strictly confidential' +
+      '<div style="background:var(--rbg);border:1px solid var(--rb);border-radius:var(--rad-sm);padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--r);font-weight:600;display:flex;align-items:center;gap:6px">' +
+        icoLock + ' Keep PINs strictly confidential' +
       '</div>' +
       Object.entries(unitLabels).map(([uid,label]) =>
-        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad-sm);padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)">' +
-          '<div style="flex:1;font-weight:700;font-size:14px">' + label + '</div>' +
-          '<input class="fi" id="pin-' + uid + '" value="' + (S.pins[uid]||"") + '" maxlength="6" type="password" style="width:90px;text-align:center;font-size:18px;font-weight:900;letter-spacing:4px" autocomplete="off">' +
-          '<button class="btn" style="width:auto;padding:11px 16px" data-savepin="' + uid + '">' + icoSave + '</button>' +
+        '<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--rad-sm);padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)">' +
+          '<div style="flex:1;font-weight:700;font-size:13px">' + label + '</div>' +
+          '<input class="fi" id="pin-' + uid + '" value="' + (S.pins[uid]||"") + '" maxlength="6" type="password" style="width:80px;text-align:center;font-size:16px;font-weight:900;letter-spacing:3px;padding:10px 8px" autocomplete="off">' +
+          '<button class="btn" style="width:auto;padding:10px 14px" data-savepin="' + uid + '">' + icoSave + '</button>' +
         '</div>'
       ).join('');
   }
@@ -941,57 +1004,53 @@ function renderAdmin() {
     '<div class="hdr">' +
       '<button class="ibtn" id="btn-back">' + icoBack + '</button>' +
       '<div style="flex:1;text-align:center"><div class="htitle">Admin Panel</div></div>' +
-      '<div style="width:40px"></div>' +
+      '<div style="width:38px"></div>' +
     '</div>' +
     '<div class="tabs">' +
       tabs.map(t => '<div class="tab ' + (S.adminTab===t.id?"act":"") + '" data-tab="' + t.id + '">' + t.label + '</div>').join('') +
     '</div>' +
-    '<div class="sp" style="padding:14px 14px 80px">' + content + '</div>' +
+    '<div class="sp" style="padding:12px 14px 80px">' + content + '</div>' +
   '</div>';
 }
 
 // ── BIND EVENTS ──────────────────────────────────────────────────────
 function bindEvents() {
-  // Unit buttons
   document.querySelectorAll("[data-unit]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const uid = btn.dataset.unit;
-      S.pinTarget = uid;
-      S.pinVal = "";
-      S.pinError = false;
-      S.screen = "pin";
-      render();
+      S.pinTarget = btn.dataset.unit;
+      S.pinVal = ""; S.pinError = false;
+      S.screen = "pin"; render();
     });
   });
 
-  // Admin button
   const ba = el("btn-admin");
   if (ba) ba.addEventListener("click", () => {
     S.pinTarget = "ADMIN"; S.pinVal = ""; S.pinError=false; S.screen="pin"; render();
   });
 
-  // Back button
   const bb = el("btn-back");
   if (bb) bb.addEventListener("click", () => {
-    if (S.screen==="ward"||S.screen==="admin") { S.screen="home"; S.showCivil={}; render(); }
+    if (S.screen==="ward"||S.screen==="admin") {
+      S.screen="home"; S.showCivil={}; S._backupReady=false; S._backupDataUrl=null;
+      render();
+    }
     else if (S.screen==="detail"||S.screen==="add") { S.screen="ward"; render(); }
     else if (S.screen==="pin") { S.screen="home"; render(); }
   });
 
-  // Backup button
   const bkup = el("btn-backup");
-  if (bkup) bkup.addEventListener("click", () => emergencyBackupPNG());
+  if (bkup) bkup.addEventListener("click", () => generateBackupPNG());
 
-  // Toggle civil ID visibility
+  const dlBackup = el("btn-dl-backup");
+  if (dlBackup) dlBackup.addEventListener("click", () => downloadBackup());
+
   const tcivil = el("toggle-civil");
   if (tcivil && S.editP) tcivil.addEventListener("click", (e) => {
     e.stopPropagation();
-    const k = S.editP._k;
-    S.showCivil[k] = !S.showCivil[k];
+    S.showCivil[S.editP._k] = !S.showCivil[S.editP._k];
     render();
   });
 
-  // PIN pad
   document.querySelectorAll("[data-pin]").forEach(k => {
     k.addEventListener("click", () => {
       const v = k.dataset.pin;
@@ -1003,16 +1062,13 @@ function bindEvents() {
     });
   });
 
-  // Filters
   document.querySelectorAll("[data-filt]").forEach(f => {
     f.addEventListener("click", () => { S.filter=f.dataset.filt; render(); });
   });
 
-  // Search
   const si = el("search-inp");
   if (si) si.addEventListener("input", e => { S.search=e.target.value; render(); });
 
-  // Patient card tap
   document.querySelectorAll(".pc").forEach(c => {
     c.addEventListener("click", () => {
       const p = S.patients.find(x=>x._k===c.dataset.key);
@@ -1020,17 +1076,14 @@ function bindEvents() {
     });
   });
 
-  // Code picker (edit)
   document.querySelectorAll("[data-cpick='e']").forEach(c => {
     c.addEventListener("click", () => { S.editCode=parseInt(c.dataset.code); render(); });
   });
 
-  // Code picker (add)
   document.querySelectorAll("[data-cpick='a']").forEach(c => {
     c.addEventListener("click", () => { S.addCode=parseInt(c.dataset.code); render(); });
   });
 
-  // Save edit
   const bs = el("btn-save");
   if (bs) bs.addEventListener("click", async () => {
     bs.disabled=true;
@@ -1040,7 +1093,6 @@ function bindEvents() {
     catch(e) { toast("Save failed","err"); bs.disabled=false; }
   });
 
-  // Delete with confirm dialog
   const bd = el("btn-delete");
   if (bd) bd.addEventListener("click", async () => {
     const confirmed = await confirmDialog(
@@ -1052,11 +1104,9 @@ function bindEvents() {
     catch(e) { toast("Delete failed","err"); }
   });
 
-  // Add
   const ba2 = el("btn-add");
   if (ba2) ba2.addEventListener("click", () => { S.addCode=null; S.screen="add"; render(); });
 
-  // Save add
   const bsa = el("btn-save-add");
   if (bsa) bsa.addEventListener("click", async () => {
     const name=el("a-name").value.trim(), civil=el("a-civil").value.trim(),
@@ -1066,22 +1116,19 @@ function bindEvents() {
     bsa.disabled=true;
     try {
       await fbAdd(S.unit,{name,civil,nat,ward,code:S.addCode,notes});
-      toast("Patient added successfully"); S.screen="ward"; render();
+      toast("Patient added"); S.screen="ward"; render();
     } catch(e) { toast("Failed to add","err"); bsa.disabled=false; }
   });
 
-  // Admin tabs
   document.querySelectorAll("[data-tab]").forEach(t => {
     t.addEventListener("click", () => { S.adminTab=t.dataset.tab; render(); });
   });
 
-  // OCR zone
   const oz = el("ocr-zone");
   if (oz) oz.addEventListener("click", () => { const f = el("ocr-file"); if(f) f.click(); });
   const of_ = el("ocr-file");
   if (of_) of_.addEventListener("change", handleOCRFile);
 
-  // OCR checkboxes
   document.querySelectorAll("[data-ocr]").forEach(c => {
     c.addEventListener("click", () => {
       const i=parseInt(c.dataset.ocr);
@@ -1091,24 +1138,21 @@ function bindEvents() {
     });
   });
 
-  // OCR select all
   const osa = el("ocr-selall");
   if (osa) osa.addEventListener("click", () => {
     S.ocrSel = S.ocrSel.length===S.ocrResults.length ? [] : S.ocrResults.map((_,i)=>i);
     render();
   });
 
-  // OCR import
   const oi = el("ocr-import");
   if (oi) oi.addEventListener("click", handleOCRImport);
 
-  // Save pins
   document.querySelectorAll("[data-savepin]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const uid=btn.dataset.savepin, val=el("pin-" + uid);
       const pinVal = val ? val.value.trim() : "";
       if (!pinVal||pinVal.length<4) { toast("PIN must be at least 4 digits","err"); return; }
-      try { await fbSetPin(uid,pinVal); S.pins[uid]=pinVal; toast("PIN saved securely"); }
+      try { await fbSetPin(uid,pinVal); S.pins[uid]=pinVal; toast("PIN saved"); }
       catch(e) { toast("Failed to save PIN","err"); }
     });
   });
@@ -1119,31 +1163,19 @@ function checkPin() {
   const correct = S.pins[S.pinTarget] || DEFAULT_PINS[S.pinTarget];
   if (S.pinVal === correct) {
     if (S.pinTarget === "ADMIN") {
-      S.screen = "admin";
-      S.adminTab = "overview";
-      listenAll();
+      S.screen = "admin"; S.adminTab = "overview"; listenAll();
     } else {
-      S.screen = "ward";
-      S.filter = "all";
-      S.search = "";
+      S.screen = "ward"; S.filter = "all"; S.search = "";
       S._backupPending = true;
+      S._backupReady = false;
+      S._backupDataUrl = null;
       listenUnit(S.pinTarget);
     }
     render();
   } else {
-    S.pinError = true;
-    S.pinVal = "";
-    render();
+    S.pinError = true; S.pinVal = ""; render();
   }
 }
-
-const UNITS_META = {
-  A_M:{label:"Unit A",sub:"Male"}, A_F:{label:"Unit A",sub:"Female"},
-  B_M:{label:"Unit B",sub:"Male"}, B_F:{label:"Unit B",sub:"Female"},
-  C_M:{label:"Unit C",sub:"Male"}, C_F:{label:"Unit C",sub:"Female"},
-  D_M:{label:"Unit D",sub:"Male"}, D_F:{label:"Unit D",sub:"Female"},
-  E_M:{label:"Unit E",sub:"Male"}, E_F:{label:"Unit E",sub:"Female"},
-};
 
 // ── OCR ──────────────────────────────────────────────────────────────
 function handleOCRFile(e) {
@@ -1152,11 +1184,8 @@ function handleOCRFile(e) {
   const reader = new FileReader();
   reader.onload = async ev => {
     const b64 = ev.target.result.split(",")[1];
-    S.ocrImg = ev.target.result;
-    S.ocrB64 = b64;
-    S.ocrResults = [];
-    S.ocrSel = [];
-    S.ocrLoading = true;
+    S.ocrImg = ev.target.result; S.ocrB64 = b64;
+    S.ocrResults = []; S.ocrSel = []; S.ocrLoading = true;
     render();
     try {
       const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI,{
@@ -1170,16 +1199,14 @@ function handleOCRFile(e) {
         })
       });
       const data = await res.json();
-      const text = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text || "[]";
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
       const clean = text.replace(/```json|```/g,"").trim();
       S.ocrResults = JSON.parse(clean);
       S.ocrSel = S.ocrResults.map((_,i)=>i);
     } catch(err) {
-      toast("Analysis failed \u2014 please try again","err");
-      S.ocrResults = [];
+      toast("Analysis failed","err"); S.ocrResults = [];
     }
-    S.ocrLoading = false;
-    render();
+    S.ocrLoading = false; render();
   };
   reader.readAsDataURL(file);
 }
@@ -1189,19 +1216,17 @@ async function handleOCRImport() {
   const uid = unitEl ? unitEl.value : null;
   if (!uid||S.ocrSel.length===0) return;
   const btn = el("ocr-import");
-  btn.disabled = true;
-  btn.textContent = "Importing...";
+  btn.disabled = true; btn.textContent = "Importing...";
   try {
     for (const i of S.ocrSel) {
       const p = S.ocrResults[i];
       await fbAdd(uid, {name:p.name||"",civil:p.civil||"",nat:p.nat||"",ward:p.ward||"",code:parseInt(p.code)||2,notes:p.notes||""});
     }
-    toast("Imported " + S.ocrSel.length + " patients successfully");
+    toast("Imported " + S.ocrSel.length + " patients");
     S.ocrResults=[]; S.ocrSel=[]; S.ocrImg=null;
     render();
   } catch(e) {
-    toast("Import failed","err");
-    btn.disabled=false;
+    toast("Import failed","err"); btn.disabled=false;
   }
 }
 
@@ -1232,11 +1257,13 @@ window.addEventListener("offline", () => { S.online=false; render(); });
 
 // ── PRIVACY: Clear sensitive data on page unload ─────────────────────
 window.addEventListener("beforeunload", () => {
-  S.patients = [];
-  S.allData = {};
-  S.editP = null;
-  S.showCivil = {};
+  S.patients = []; S.allData = {};
+  S.editP = null; S.showCivil = {};
+  S._backupDataUrl = null;
 });
+
+// ── PRIVACY: Prevent drag/drop of patient data ──────────────────────
+document.addEventListener("dragstart", e => e.preventDefault());
 
 // ── BOOT ─────────────────────────────────────────────────────────────
 async function boot() {
