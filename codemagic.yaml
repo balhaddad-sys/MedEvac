@@ -17,11 +17,16 @@ workflows:
           export ANDROID_HOME=${ANDROID_HOME:-$HOME/android-sdk}
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "JAVA_HOME=$JAVA_HOME"
+          ls -d "$JAVA_HOME" "$ANDROID_HOME" 2>/dev/null || echo "WARNING: paths may not exist"
 
           # Create bubblewrap config to skip interactive JDK/SDK prompts
           mkdir -p "$HOME/.llama-pack"
           printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$ANDROID_HOME" > "$HOME/.llama-pack/llama-pack-config.json"
           cat "$HOME/.llama-pack/llama-pack-config.json"
+
+          # Also create in alternate config location
+          mkdir -p "$HOME/.bubblewrap"
+          cp "$HOME/.llama-pack/llama-pack-config.json" "$HOME/.bubblewrap/config.json"
 
           # Accept Android SDK licenses
           yes | sdkmanager --licenses 2>/dev/null || true
@@ -84,8 +89,8 @@ workflows:
           echo "=== Bubblewrap config ==="
           cat "$HOME/.llama-pack/llama-pack-config.json"
 
-          # Use 'yes' to auto-answer any remaining prompts
-          yes | bubblewrap build \
+          # Answer "n" to JDK/SDK install prompts (use system ones)
+          yes n | bubblewrap build \
             --manifest twa-manifest.json \
             --signingKeyPath ./keystore.jks \
             --signingKeyAlias medevac \
