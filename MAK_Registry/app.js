@@ -13,7 +13,7 @@ let _authReady=false,_authUid=null;
 onAuthStateChanged(auth,u=>{_authUid=u?u.uid:null;_authReady=true;});
 let _authFailed=false;
 const _authP=signInAnonymously(auth).catch(e=>{console.warn("Auth failed",e);_authFailed=true;return null;});
-let GK=atob("c2stYW50LWFwaTAzLUljUFJkNEh4dXh5c2d1cUZrVkdKMjVqdnZ2Z1psWWVJZEVtbC1JVHZ6bDVqSEFwMUZ1bjlIVlVVMjk3d3E1TmdQSVc5WVp3Z1RQdjJFbnh4VVFVX3BnLVFUQ1dVUVFBQQ==");
+let GK="";
 
 // === Offline persistence with AES-GCM encryption ===
 const _aesSalt=new TextEncoder().encode("mak_aes_unit-e-1d07b");
@@ -299,7 +299,7 @@ const readFile=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=ev=>ok
 const content=[];imgs.forEach(im=>content.push({type:"image",source:{type:"base64",media_type:im.mime,data:im.data}}));
 content.push({type:"text",text:'Extract ALL patients from these images. Return ONLY a JSON array: [{"name":"Full Name","civil":"Civil ID number","nat":"Nationality","ward":"Ward/bed info","code":1,"notes":"any notes"}]. code: 1=green,2=yellow,3=red,4=critical. If no patients found return [].'});
 if(!GK){toast("API key missing","err");S.ocrLoading=false;render();return;}
-const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":GK,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-6-20250514",max_tokens:4096,messages:[{role:"user",content}]})});
+const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":GK,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4096,messages:[{role:"user",content}]})});
 if(!res.ok){const errText=await res.text();console.error("Claude API error:",res.status,errText);toast("API error "+res.status+": check console","err");S.ocrLoading=false;render();return;}
 const data=await res.json();console.log("Claude response:",JSON.stringify(data).slice(0,500));
 const raw=data.content?.[0]?.text||"[]";const cleaned=raw.replace(/```json|```/g,"").trim();
