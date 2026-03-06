@@ -149,6 +149,21 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 .ibanner.show{transform:translateY(0)}
 .ibanner strong{font-size:13px;font-weight:800;color:#fff;display:block}
 .ibanner span{font-size:11px;color:#94a3b8}
+.install-guide{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;z-index:400;backdrop-filter:blur(6px)}
+.install-guide.show{display:flex}
+.install-guide__card{width:min(420px,calc(100% - 40px));background:#0f172a;border-radius:20px;padding:24px;box-shadow:0 20px 40px rgba(15,23,42,.55);color:#fff;position:relative;font-family:'Inter',system-ui,sans-serif}
+.install-guide__close{position:absolute;top:12px;right:12px;width:32px;height:32px;border:none;border-radius:10px;background:rgba(255,255,255,.1);color:#fff;font-size:18px;cursor:pointer}
+.install-guide__title{font-size:20px;font-weight:800;margin-bottom:6px}
+.install-guide__desc{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:16px}
+.install-guide__step-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.install-guide__step-desc{font-size:13px;color:#cbd5f5;margin-bottom:16px;line-height:1.4}
+.install-guide__progress{display:flex;gap:6px;margin-bottom:16px}
+.install-guide__progress span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.3)}
+.install-guide__progress span.active{background:#38bdf8;box-shadow:0 0 6px rgba(56,189,248,.8)}
+.install-guide__actions{display:flex;gap:8px;margin-bottom:12px}
+.install-guide__actions button{flex:1;border-radius:12px;border:none;padding:11px 0;font-weight:700;font-size:13px}
+.install-guide__actions button:disabled{opacity:.4;cursor:not-allowed}
+.install-guide__hint{font-size:12px;color:rgba(255,255,255,.6);text-align:center}
 .ib-btn{background:#fff;color:var(--pri);border:none;border-radius:var(--radius-xs);padding:10px 18px;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
 .ib-x{background:none;border:none;color:rgba(255,255,255,.3);font-size:16px;cursor:pointer}
 .t-overlay{position:fixed;inset:0;background:rgba(15,23,42,.85);backdrop-filter:blur(16px);z-index:500;display:flex;align-items:center;justify-content:center}
@@ -187,6 +202,22 @@ window.onunhandledrejection=function(e){showFatal('<div style="padding:40px;colo
   <button class="ib-btn" id="ib-btn">Install</button>
   <button class="ib-x" onclick="dismissInstall()">&#x2715;</button>
 </div>
+<div class="install-guide" id="install-guide" aria-live="polite" role="dialog" aria-label="Add MedEvac to home screen">
+  <div class="install-guide__card">
+    <button class="install-guide__close" id="install-guide-close" aria-label="Close instructions">×</button>
+    <div class="install-guide__title">Add MedEvac to your Home screen</div>
+    <div class="install-guide__desc">A quick, interactive walk-through so the app is always just one tap away.</div>
+    <div class="install-guide__step-title" id="install-guide-step-title"></div>
+    <div class="install-guide__step-desc" id="install-guide-step-desc"></div>
+    <div class="install-guide__progress" id="install-guide-progress"></div>
+    <div class="install-guide__actions">
+      <button class="btn btn2" id="install-guide-prev">Back</button>
+      <button class="btn" id="install-guide-next">Next</button>
+    </div>
+    <button class="btn" id="install-guide-now">Open install prompt</button>
+    <div class="install-guide__hint" id="install-guide-hint">Need help? Tap the browser menu (or share icon on iOS) and choose “Add to Home screen”.</div>
+  </div>
+</div>
 
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -212,6 +243,63 @@ chk:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" s
 const PINS={A_M:"1111",A_F:"1112",B_M:"2221",B_F:"2222",C_M:"3331",C_F:"3332",D_M:"4441",D_F:"4442",E_M:"5551",E_F:"5552",ADMIN:"0000"};
 const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"},4:{label:"Critical",cls:"red"}};
 const cc=c=>CC[c]||CC[4];
+const installSteps=[
+  {title:"Step 1 · Open browser controls",desc:"Tap the three-dot menu (or share icon on iPhone) to open browser controls."},
+  {title:"Step 2 · Choose Add to Home screen",desc:"From the menu pick “Add to Home screen” or the equivalent “Add to Home”. It's usually near the bottom."},
+  {title:"Step 3 · Confirm and test",desc:"Adjust the name if you like, tap Add, then find the MedEvac icon on your home screen."}
+];
+const installGuideKey="mk_install_guide_shown";
+let installGuideStep=0;
+
+function renderInstallGuide(){
+  const guide=document.getElementById("install-guide");
+  if(!guide)return;
+  const title=document.getElementById("install-guide-step-title");
+  const desc=document.getElementById("install-guide-step-desc");
+  const progress=document.getElementById("install-guide-progress");
+  const step=installSteps[installGuideStep]||installSteps[0];
+  if(title)title.textContent=step.title;
+  if(desc)desc.textContent=step.desc;
+  if(progress)progress.innerHTML=installSteps.map((s,i)=>`<span class="${i===installGuideStep?"active":""}"></span>`).join("");
+  const prev=document.getElementById("install-guide-prev");
+  const next=document.getElementById("install-guide-next");
+  if(prev)prev.disabled=installGuideStep===0;
+  if(next)next.disabled=installGuideStep===installSteps.length-1;
+}
+
+function showInstallGuide(force=false){
+  const guide=document.getElementById("install-guide");
+  if(!guide)return;
+  if(!force&&!installSteps.length)return;
+  if(!force&&localStorage.getItem(installGuideKey))return;
+  installGuideStep=0;
+  renderInstallGuide();
+  guide.classList.add("show");
+  localStorage.setItem(installGuideKey,"1");
+}
+
+function hideInstallGuide(){
+  const guide=document.getElementById("install-guide");
+  if(guide)guide.classList.remove("show");
+}
+
+function advanceInstallGuide(delta){
+  installGuideStep=Math.max(0,Math.min(installSteps.length-1,installGuideStep+delta));
+  renderInstallGuide();
+}
+
+function openInstallPrompt(){
+  if(_dp){
+    _dp.prompt();
+    _dp.userChoice.then(()=>dismissInstall()).catch(()=>{});
+    hideInstallGuide();
+    return;
+  }
+  const hint=document.getElementById("install-guide-hint");
+  if(!hint)return;
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent))hint.textContent="Tap Share > Add to Home Screen > Add.";
+  else hint.textContent="Open the browser menu (three dots) and choose Add to Home screen.";
+}
 
 const SEED_M=[{name:"\u062e\u0627\u0644\u062f \u0645\u062d\u0645\u062f \u0623\u062d\u0645\u062f",civil:"264100700097",nat:"\u0623\u0631\u062f\u0646\u064a",ward:"W14",code:4,notes:""},{name:"\u0639\u0628\u062f\u0627\u0644\u0644\u0647 \u0645\u062d\u0645\u0648\u062f \u0627\u0644\u0646\u062c\u0627\u0631",civil:"233041500113",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W15",code:3,notes:""},{name:"\u0646\u0648\u0627\u0641 \u0646\u0633\u064a\u0645 \u0628\u0648\u0646\u0627\u0634\u064a",civil:"286122601564",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W20",code:4,notes:""},{name:"\u062d\u0633\u064a\u0646 \u0645\u0639\u0631\u0641\u0649 \u0635\u0641\u0631",civil:"240092800373",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W19R3",code:2,notes:""},{name:"\u0623\u0633\u0627\u0645\u0629 \u0645\u062d\u0645\u062f \u0639\u062b\u0645\u0627\u0646",civil:"272031402984",nat:"\u0645\u0635\u0631\u064a",ward:"W22R17",code:1,notes:""},{name:"\u062d\u064a\u062f\u0631 \u0639\u0648\u0636 \u062d\u0633\u064a\u0646",civil:"244100400184",nat:"\u0643\u0648\u064a\u062a\u064a",ward:"W22R5",code:2,notes:""}];
 const SEED_F=[{name:"\u0641\u0648\u0632\u064a\u0629 \u0639\u0628\u062f\u0627\u0644\u0648\u0647\u0627\u0628",civil:"252072701341",nat:"\u0643\u0648\u064a\u062a\u064a\u0629",ward:"W25R15",code:2,notes:""},{name:"\u0641\u0627\u0637\u0645\u0629 \u0633\u0639\u064a\u062f",civil:"243020600288",nat:"\u064a\u0645\u0646\u064a\u0629",ward:"W25R16",code:3,notes:""},{name:"\u0648\u0641\u0627\u0621 \u0639\u0628\u062f\u0627\u0644\u062c\u0644\u064a\u0644",civil:"259091300342",nat:"\u0645\u0635\u0631\u064a\u0629",ward:"W25R11",code:4,notes:""}];
@@ -336,16 +424,34 @@ function bindAll(){
 
 function checkPin(){const c=S.pins[S.pinTarget]||PINS[S.pinTarget];if(S.pinVal===c){if(S.pinTarget==="ADMIN"){S.screen="admin";S.adminTab="overview";listenAll();}else{S.screen="ward";S.filter="all";S.search="";S._bp=true;listenUnit(S.pinTarget);}render();}else{S.pinError=true;S.pinVal="";render();}}
 
-function handleOCR(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async ev=>{S.ocrImg=ev.target.result;S.ocrB64=ev.target.result.split(",")[1];S.ocrResults=[];S.ocrSel=[];S.ocrLoading=true;render();try{const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key="+GK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:file.type,data:S.ocrB64}},{text:'Extract ALL patients. Return ONLY JSON array: [{"name":"","civil":"","nat":"","ward":"","code":1,"notes":""}]. 1=green,2=yellow,3=red,4=critical.'}]}]})});const data=await res.json();S.ocrResults=JSON.parse((data.candidates?.[0]?.content?.parts?.[0]?.text||"[]").replace(/```json|```/g,"").trim());S.ocrSel=S.ocrResults.map((_,i)=>i);}catch(err){toast("Failed","err");S.ocrResults=[];}S.ocrLoading=false;render();};reader.readAsDataURL(file);}
+function handleOCR(e){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=async ev=>{S.ocrImg=ev.target.result;S.ocrB64=ev.target.result.split(",")[1];S.ocrResults=[];S.ocrSel=[];S.ocrLoading=true;render();try{const res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key="+GK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:file.type,data:S.ocrB64}},{text:'Extract ALL patients. Return ONLY JSON array: [{\"name\":\"\",\"civil\":\"\",\"nat\":\"\",\"ward\":\"\",\"code\":1,\"notes\":\"\"}]. 1=green,2=yellow,3=red,4=critical.'}]}]})});const data=await res.json();S.ocrResults=JSON.parse((data.candidates?.[0]?.content?.parts?.[0]?.text||"[]").replace(/```json|```/g,"").trim());S.ocrSel=S.ocrResults.map((_,i)=>i);}catch(err){toast("Failed","err");S.ocrResults=[];}S.ocrLoading=false;render();};reader.readAsDataURL(file);}
 
 async function importOCR(){const uid=$("ou")?.value;if(!uid||!S.ocrSel.length)return;const b=$("oi");b.disabled=true;try{for(const i of S.ocrSel){const p=S.ocrResults[i];await push(ref(db,"patients/"+uid),{name:p.name||"",civil:p.civil||"",nat:p.nat||"",ward:p.ward||"",code:+p.code||2,notes:p.notes||"",ts:Date.now()});}toast("Imported "+S.ocrSel.length);S.ocrResults=[];S.ocrSel=[];S.ocrImg=null;render();}catch(e){toast("Failed","err");b.disabled=false;}}
 
 let _dp=null;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();_dp=e;if(!localStorage.getItem("mi"))setTimeout(()=>{const b=$("ibanner");if(b)b.classList.add("show");},3000);});
-const ib=$("ib-btn");if(ib)ib.addEventListener("click",()=>{if(_dp){_dp.prompt();_dp.userChoice.then(()=>dismissInstall());}else if(/iphone|ipad/i.test(navigator.userAgent)){alert("Tap Share > Add to Home Screen");dismissInstall();}});
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault();
+  _dp=e;
+  if(!localStorage.getItem(installGuideKey))setTimeout(showInstallGuide,1500);
+  if(!localStorage.getItem("mi"))setTimeout(()=>{
+    const b=$("ibanner");
+    if(b)b.classList.add("show");
+  },3000);
+});
+const ib=$("ib-btn");if(ib)ib.addEventListener("click",()=>showInstallGuide(true));
 window.dismissInstall=()=>{const b=$("ibanner");if(b)b.classList.remove("show");localStorage.setItem("mi","1");};
 window.addEventListener("online",()=>{S.online=true;render();});
 window.addEventListener("offline",()=>{S.online=false;render();});
+const installGuidePrev=$("install-guide-prev");
+if(installGuidePrev)installGuidePrev.addEventListener("click",()=>advanceInstallGuide(-1));
+const installGuideNext=$("install-guide-next");
+if(installGuideNext)installGuideNext.addEventListener("click",()=>advanceInstallGuide(1));
+const installGuideNow=$("install-guide-now");
+if(installGuideNow)installGuideNow.addEventListener("click",openInstallPrompt);
+const installGuideClose=$("install-guide-close");
+if(installGuideClose)installGuideClose.addEventListener("click",hideInstallGuide);
+const installGuideEl=$("install-guide");
+if(installGuideEl)installGuideEl.addEventListener("click",e=>{if(e.target===installGuideEl)hideInstallGuide();});
 
 async function boot(){try{listenAll();S.screen="home";render();await seedData();}catch(e){showFatal('<div style="padding:40px;color:red;font-size:14px;word-break:break-all"><b>Boot Error:</b><br>'+e.message+'<br><br>'+e.stack+'</div>');}}
 boot();
