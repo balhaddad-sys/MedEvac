@@ -1,4 +1,4 @@
-const CACHE = "mak-v17";
+const CACHE = "mak-v18";
 
 const PRECACHE = [
   "/",
@@ -36,6 +36,9 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const url = e.request.url;
+
+  // Only cache http/https requests
+  if (!url.startsWith("http")) return;
 
   // Never cache realtime database connections or API calls
   if (url.includes("firebasedatabase.app") || url.includes("firebaseio.com") || url.includes("generativelanguage") || url.includes("anthropic.com") || url.includes("cloudfunctions.net")) return;

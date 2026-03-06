@@ -277,6 +277,9 @@ function bindAll(){
 async function checkPin(){
   // Client-side lockout (server also rate-limits)
   if(S.pinLockUntil>Date.now()){const secs=Math.ceil((S.pinLockUntil-Date.now())/1000);toast("Locked for "+secs+"s","err");S.pinVal="";render();return;}
+  // Ensure auth is ready before calling Cloud Functions
+  await _authP;
+  if(!_authUid){try{await signInAnonymously(auth);}catch(e){toast("Auth failed — check connection","err");S.pinVal="";render();return;}}
   try{
     await fnVerifyPin({unit:S.pinTarget,pin:S.pinVal});
     // Success — server already logged audit
