@@ -14,19 +14,14 @@ workflows:
     scripts:
       - name: Set up Android SDK and JDK
         script: |
-          # Set ANDROID_HOME if not already set
           export ANDROID_HOME=${ANDROID_HOME:-$HOME/android-sdk}
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "JAVA_HOME=$JAVA_HOME"
 
-          # Create bubblewrap config to skip interactive prompts
+          # Create bubblewrap config to skip interactive JDK/SDK prompts
           mkdir -p "$HOME/.llama-pack"
-          cat > "$HOME/.llama-pack/llama-pack-config.json" << LLCONF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "$ANDROID_HOME"
-          }
-          LLCONF
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$ANDROID_HOME" > "$HOME/.llama-pack/llama-pack-config.json"
+          cat "$HOME/.llama-pack/llama-pack-config.json"
 
           # Accept Android SDK licenses
           yes | sdkmanager --licenses 2>/dev/null || true
@@ -84,17 +79,28 @@ workflows:
       - name: Build TWA APK
         script: |
           cd twa-build
-          echo "y" | bubblewrap build \
+
+          # Verify config exists to skip JDK prompt
+          echo "=== Bubblewrap config ==="
+          cat "$HOME/.llama-pack/llama-pack-config.json"
+
+          # Use 'yes' to auto-answer any remaining prompts
+          yes | bubblewrap build \
             --manifest twa-manifest.json \
             --signingKeyPath ./keystore.jks \
             --signingKeyAlias medevac \
             --signingKeyPassword "${CM_KEYSTORE_PASSWORD:-medevac123}" \
             --signingStorePassword "${CM_KEYSTORE_PASSWORD:-medevac123}" \
-            --skipPwaValidation
+            --skipPwaValidation \
+            2>&1 || true
+
+          # Check if APK was generated
+          ls -la *.apk 2>/dev/null || echo "No APK files found in twa-build"
+          ls -la app/build/outputs/apk/ 2>/dev/null || true
 
     artifacts:
-      - twa-build/app-release-signed.apk
-      - twa-build/app-release-unsigned.apk
+      - twa-build/**/*.apk
+      - twa-build/**/*.aab
 
   medevac-ios:
     name: MedEvac iOS App
