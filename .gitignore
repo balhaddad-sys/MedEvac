@@ -2,3 +2,14 @@ node_modules/
 .firebase/
 .claude/
 *.ipa
+
+# Secrets & credentials
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.p8
+keystore.jks
+serviceAccountKey.json
+*-credentials.json
