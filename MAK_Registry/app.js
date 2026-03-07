@@ -147,7 +147,7 @@ function openInstallPrompt(){
   else hint.textContent="Open the browser menu (three dots) and choose Add to Home screen.";
 }
 
-let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinOk:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:""};
+let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinOk:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:"",expandedUnits:{},adminSearch:"",adminFilter:"all"};
 async function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;
   // Load cached data immediately
   const cached=await LS.load("patients_"+uid);
@@ -244,7 +244,33 @@ function vAdd(){
 
 function vAdmin(){
   const tabs=[{id:"overview",l:"Overview"},{id:"ocr",l:"OCR"},{id:"pins",l:"Security"}];let c="";
-  if(S.adminTab==="overview")c=["A","B","C","D","E"].map(u=>{const m=Object.values(S.allData[u+"_M"]||{}),f=Object.values(S.allData[u+"_F"]||{}),all=[...m,...f],g=all.filter(p=>p.code==1).length,y=all.filter(p=>p.code==2).length,r=all.filter(p=>p.code>=3).length;return'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)"><div style="background:linear-gradient(135deg,#1e3a5f,#1e40af);padding:14px 18px;color:#fff;font-weight:800;font-size:13px;display:flex;justify-content:space-between;letter-spacing:-.2px"><span>Unit '+u+'</span><span style="opacity:.3;font-size:11px">'+all.length+'</span></div><div style="display:grid;grid-template-columns:repeat(4,1fr);padding:14px;text-align:center"><div><div style="font-size:20px;font-weight:900;color:var(--acc)">'+all.length+'</div><div style="font-size:7px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:4px;letter-spacing:.8px">All</div></div><div><div style="font-size:20px;font-weight:900;color:var(--g)">'+g+'</div><div style="font-size:7px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:4px;letter-spacing:.8px">Green</div></div><div><div style="font-size:20px;font-weight:900;color:var(--y)">'+y+'</div><div style="font-size:7px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:4px;letter-spacing:.8px">Yellow</div></div><div><div style="font-size:20px;font-weight:900;color:var(--r)">'+r+'</div><div style="font-size:7px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:4px;letter-spacing:.8px">Red</div></div></div></div>';}).join("");
+  if(S.adminTab==="overview"){
+    // Global search + filter bar
+    const allPatients=[];
+    ["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{const uid=u+"_"+g;Object.entries(S.allData[uid]||{}).forEach(([k,v])=>allPatients.push({...v,_k:k,_uid:uid,_unit:u,_gender:g}));}));
+    const totalAll=allPatients.length,totalG=allPatients.filter(p=>p.code==1).length,totalY=allPatients.filter(p=>p.code==2).length,totalR=allPatients.filter(p=>p.code>=3).length;
+    const q=S.adminSearch?S.adminSearch.toLowerCase():"";
+    c='<div class="adm-summary"><div class="adm-stat"><div class="adm-n" style="color:var(--acc)">'+totalAll+'</div><div class="adm-l">All</div></div><div class="adm-stat"><div class="adm-n" style="color:var(--g)">'+totalG+'</div><div class="adm-l">Green</div></div><div class="adm-stat"><div class="adm-n" style="color:var(--y)">'+totalY+'</div><div class="adm-l">Yellow</div></div><div class="adm-stat"><div class="adm-n" style="color:var(--r)">'+totalR+'</div><div class="adm-l">Red</div></div></div>'
+    +'<div style="margin-bottom:10px"><input class="sinp" id="adm-search" placeholder="Search all patients..." value="'+esc(S.adminSearch)+'" style="width:100%"></div>'
+    +'<div class="adm-filters"><div class="adm-flt'+(S.adminFilter==="all"?" act":"")+'" data-af="all">All</div><div class="adm-flt'+(S.adminFilter==="r"?" act":"")+'" data-af="r" style="color:var(--r)">Red</div><div class="adm-flt'+(S.adminFilter==="2"?" act":"")+'" data-af="2" style="color:var(--y)">Yellow</div><div class="adm-flt'+(S.adminFilter==="1"?" act":"")+'" data-af="1" style="color:var(--g)">Green</div></div>';
+    c+=["A","B","C","D","E"].map(u=>{
+      const m=Object.entries(S.allData[u+"_M"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_M",_g:"M"}));
+      const f=Object.entries(S.allData[u+"_F"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_F",_g:"F"}));
+      let all=[...m,...f].sort((a,b)=>(b.code||0)-(a.code||0));
+      // Apply filter
+      if(S.adminFilter==="1")all=all.filter(p=>p.code==1);
+      else if(S.adminFilter==="2")all=all.filter(p=>p.code==2);
+      else if(S.adminFilter==="r")all=all.filter(p=>p.code>=3);
+      // Apply search
+      if(q)all=all.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.civil||"").includes(q)||(p.ward||"").toLowerCase().includes(q));
+      const gC=all.filter(p=>p.code==1).length,yC=all.filter(p=>p.code==2).length,rC=all.filter(p=>p.code>=3).length;
+      const isOpen=S.expandedUnits[u];
+      const chevron='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform .2s;transform:rotate('+(isOpen?"180":"0")+'deg)"><polyline points="6 9 12 15 18 9"/></svg>';
+      return'<div class="acc-unit"><div class="acc-hdr" data-toggle="'+u+'"><div class="acc-hdr-l"><span class="acc-name">Unit '+u+'</span><span class="acc-cnt">'+all.length+'</span></div><div class="acc-hdr-r"><span class="acc-badge" style="background:var(--gbg);color:var(--g)">'+gC+'</span><span class="acc-badge" style="background:var(--ybg);color:var(--y)">'+yC+'</span><span class="acc-badge" style="background:var(--rbg);color:var(--r)">'+rC+'</span>'+chevron+'</div></div>'
+      +(isOpen?'<div class="acc-body">'+(all.length?all.map(p=>{const c2=cc(p.code);return'<div class="acc-row"><div class="acc-strip '+c2.cls+'"></div><div class="acc-row-body"><div class="acc-row-main"><div class="acc-pname">'+esc(p.name)+'</div><div class="acc-pmeta"><span>'+esc(p.ward||"-")+'</span><span>'+esc(p._g==="F"?"F":"M")+'</span></div></div><div class="acc-row-code '+c2.cls+'">'+p.code+'</div></div></div>';}).join(""):'<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No patients</div>')+'</div>':'')
+      +'</div>';
+    }).join("");
+  }
   else if(S.adminTab==="ocr")c='<div class="ocr-drop" id="oz"><input type="file" id="of" accept="image/*" multiple style="display:none"><div style="margin-bottom:12px;opacity:.5">'+I.cam+'</div><div style="font-weight:800;font-size:14px;margin-bottom:4px">Capture / Upload</div><div style="font-size:12px;color:var(--muted)">Select one or more images</div></div>'+(S.ocrImg?'<img src="'+S.ocrImg+'" style="width:100%;border-radius:12px;margin:10px 0;max-height:160px;object-fit:cover">':'')+(S.ocrLoading?'<div style="text-align:center;padding:20px"><div class="loader"></div><p style="margin-top:10px;color:var(--muted);font-size:12px">Analyzing...</p></div>':'')+(S.ocrResults.length?'<div style="margin-top:10px"><div class="fg"><select class="fi" id="ou">'+["A","B","C","D","E"].flatMap(u=>['<option value="'+u+'_M">Unit '+u+' M</option>','<option value="'+u+'_F">Unit '+u+' F</option>']).join("")+'</select></div>'+S.ocrResults.map((p,i)=>'<div class="ocr-row"><div class="ocr-chk'+(S.ocrSel.includes(i)?" on":"")+'" data-ocr="'+i+'">'+(S.ocrSel.includes(i)?I.chk:"")+'</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px">'+esc(p.name||"-")+'</div><div style="font-size:11px;color:var(--muted)">'+esc(p.civil||"")+'</div></div></div>').join("")+'<div style="display:flex;gap:8px;margin-top:10px"><button class="btn2" id="osa">All</button><button class="btn" id="oi"'+(S.ocrSel.length?"":" disabled")+'>Import '+S.ocrSel.length+'</button></div></div>':'');
   else if(S.adminTab==="pins"){const labels={A_M:"A Male",A_F:"A Female",B_M:"B Male",B_F:"B Female",C_M:"C Male",C_F:"C Female",D_M:"D Male",D_F:"D Female",E_M:"E Male",E_F:"E Female",ADMIN:"Admin"};c='<div style="background:var(--rbg);border:1px solid var(--rbd);border-radius:var(--radius-xs);padding:12px;margin-bottom:14px;font-size:11px;color:var(--r);font-weight:600;display:flex;gap:8px;letter-spacing:.2px">'+I.lock+' Keep PINs secret</div>'+Object.entries(labels).map(([uid,l])=>'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);"><div style="flex:1;font-weight:700;font-size:13px">'+l+'</div><input class="fi" id="p-'+uid+'" placeholder="'+(S.pinStatus[uid]?"\u2022\u2022\u2022\u2022":"New")+'" maxlength="6" type="password" style="width:70px;text-align:center;font-size:16px;font-weight:900;letter-spacing:3px;padding:8px" autocomplete="off"><button class="btn" style="width:auto;padding:8px 12px" data-sp="'+uid+'">'+I.save+'</button></div>').join("");}
   return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Admin</h1></div><div style="width:36px"></div></div><div class="tabs">'+tabs.map(t=>'<div class="tab'+(S.adminTab===t.id?" act":"")+'" data-tab="'+t.id+'">'+t.l+'</div>').join("")+'</div><div class="sp" style="padding:10px 12px 80px">'+c+'</div></div>';
@@ -253,10 +279,14 @@ function vAdmin(){
 function updatePinDisplay(){
   if(S.screen!=="pin")return;
   const body=$("pin-body");
-  if(body)body.classList.toggle("pin-shake",S.pinError);
+  if(body){
+    body.classList.toggle("pin-shake",S.pinError);
+    body.classList.toggle("pin-checking",S._pinChecking);
+  }
   const titleEl=$("pin-title");
   if(titleEl){
-    titleEl.textContent=S.pinError?"Wrong PIN":S.pinOk?"Verified":"Enter PIN";
+    const titleText=S.pinError?"Wrong PIN":S.pinOk?"Verified":S._pinChecking?"Verifying...":"Enter PIN";
+    titleEl.textContent=titleText;
     titleEl.classList.toggle("t-err",S.pinError);
   }
   const dots=document.querySelectorAll("#pin-dots .pdot");
@@ -293,6 +323,10 @@ function bindAll(){
     // Duplicate detection by Civil ID
     const dup=S.patients.find(p=>p.civil&&p.civil===c);if(dup&&!confirm("Patient with Civil ID "+c+" already exists ("+dup.name+"). Add anyway?")){return;}bsa.disabled=true;const data={name:n,civil:c,nat,ward:w,code:S.addCode,notes,ts:Date.now()};try{await push(ref(db,"patients/"+S.unit),data);audit("add",S.unit,data.name);toast("Added");}catch(e){const offKey="off_"+Date.now();await LS.queueOp({type:"push",path:"patients/"+S.unit,data});await _offlineUpdate(S.unit,offKey,data);toast("Added offline","ok");}S.screen="ward";render();});
   document.querySelectorAll("[data-tab]").forEach(t=>t.addEventListener("click",()=>{S.adminTab=t.dataset.tab;render();}));
+  // Admin accordion toggles
+  document.querySelectorAll("[data-toggle]").forEach(h=>h.addEventListener("click",()=>{const u=h.dataset.toggle;S.expandedUnits[u]=!S.expandedUnits[u];render();}));
+  const admS=$("adm-search");if(admS){admS.addEventListener("input",e=>{S.adminSearch=e.target.value;render();const el=$("adm-search");if(el){el.focus();el.selectionStart=el.selectionEnd=el.value.length;}});}
+  document.querySelectorAll("[data-af]").forEach(f=>f.addEventListener("click",()=>{S.adminFilter=f.dataset.af;render();}));
   const oz=$("oz");if(oz)oz.addEventListener("click",()=>{const f=$("of");if(f)f.click();});
   const of_=$("of");if(of_)of_.addEventListener("change",handleOCR);
   document.querySelectorAll("[data-ocr]").forEach(c=>c.addEventListener("click",()=>{const i=+c.dataset.ocr;if(S.ocrSel.includes(i))S.ocrSel=S.ocrSel.filter(x=>x!==i);else S.ocrSel.push(i);render();}));
@@ -306,6 +340,7 @@ async function checkPin(){
   // Client-side lockout (server also rate-limits)
   if(S.pinLockUntil>Date.now()){const secs=Math.ceil((S.pinLockUntil-Date.now())/1000);toast("Locked for "+secs+"s","err");S.pinVal="";render();return;}
   S._pinChecking=true;
+  updatePinDisplay();
   // Ensure auth is ready before calling Cloud Functions
   await _authP;
   if(!_authUid){try{await signInAnonymously(auth);}catch(e){toast("Auth failed — check connection","err");S.pinVal="";S._pinChecking=false;render();return;}}
