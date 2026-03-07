@@ -216,7 +216,9 @@ function vHome(){
 function vPin(){
   const isA=S.pinTarget==="ADMIN",u=["A","B","C","D","E"].find(u=>S.pinTarget===u+"_M"||S.pinTarget===u+"_F"),g=S.pinTarget?.endsWith("_M")?"Male":"Female";
   const dotCls=S.pinError?"err":S.pinOk?"ok":"f";
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>'+(isA?"Admin":"Unit "+u+" \u2014 "+g)+'</h1></div><div style="width:36px"></div></div><div class="pin-body'+(S.pinError?" pin-shake":"")+'"><div class="pin-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="pin-title">'+(S.pinError?"Wrong PIN":"Enter PIN")+'</div><div class="pin-dots">'+[0,1,2,3,4,5].map(i=>'<div class="pdot'+(i<S.pinVal.length?" "+dotCls:"")+'"></div>').join("")+'</div><div class="pkeys">'+[[1,2,3],[4,5,6],[7,8,9],["",0,"\u232b"]].map(r=>r.map(k=>k===""?'<div></div>':'<button class="pkey'+(k==="\u232b"?" del":"")+'" data-pin="'+k+'">'+k+'</button>').join("")).join("")+'</div></div></div>';
+  const titleCls=S.pinError?" t-err":"";
+  const titleTxt=S.pinError?"Wrong PIN":S.pinOk?"Verified":"Enter PIN";
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>'+(isA?"Admin":"Unit "+u+" \u2014 "+g)+'</h1></div><div style="width:36px"></div></div><div class="pin-body'+(S.pinError?" pin-shake":"")+'"><div class="pin-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="pin-title'+titleCls+'">'+titleTxt+'</div><div class="pin-dots">'+[0,1,2,3].map(i=>'<div class="pdot'+(i<S.pinVal.length?" "+dotCls:"")+'"></div>').join("")+'</div><div class="pkeys">'+[[1,2,3],[4,5,6],[7,8,9],["",0,"\u232b"]].map(r=>r.map(k=>k===""?'<div></div>':'<button class="pkey'+(k==="\u232b"?" del":"")+'" data-pin="'+k+'">'+k+'</button>').join("")).join("")+'</div></div></div>';
 }
 
 function vWard(){
@@ -247,7 +249,7 @@ function bindAll(){
   const bb=$("bb");if(bb)bb.addEventListener("click",()=>{if(S.screen==="ward"||S.screen==="admin"){S.screen="home";S.showCivil={};render();}else if(S.screen==="detail"||S.screen==="add"){S.screen="ward";render();}else if(S.screen==="pin"){S.screen="home";render();}});
   const bdl=$("bdl");if(bdl)bdl.addEventListener("click",()=>backupPNG());
   const tc=$("tc");if(tc&&S.editP)tc.addEventListener("click",e=>{e.stopPropagation();const show=!S.showCivil[S.editP._k];S.showCivil[S.editP._k]=show;if(show)audit("view_civil",S.unit,S.editP.name);render();});
-  document.querySelectorAll("[data-pin]").forEach(k=>k.addEventListener("click",()=>{const v=k.dataset.pin;if(v==="\u232b"){S.pinVal=S.pinVal.slice(0,-1);try{navigator.vibrate(40);}catch(e){}}else if(S.pinVal.length<6){S.pinVal+=v;try{navigator.vibrate(20);}catch(e){}}S.pinError=false;S.pinOk=false;if(S.pinVal.length===4||S.pinVal.length===6)checkPin();else render();}));
+  document.querySelectorAll("[data-pin]").forEach(k=>k.addEventListener("click",()=>{if(S.pinOk||S._pinChecking)return;const v=k.dataset.pin;if(v==="\u232b"){S.pinVal=S.pinVal.slice(0,-1);try{navigator.vibrate(30);}catch(e){}}else if(S.pinVal.length<4){S.pinVal+=v;try{navigator.vibrate(15);}catch(e){}}S.pinError=false;S.pinOk=false;render();if(S.pinVal.length===4)checkPin();}));
   document.querySelectorAll("[data-filt]").forEach(f=>f.addEventListener("click",()=>{S.filter=f.dataset.filt;render();}));
   const si=$("si");if(si)si.addEventListener("input",e=>{S.search=e.target.value;render();});
   document.querySelectorAll(".pc").forEach(c=>c.addEventListener("click",()=>{const p=S.patients.find(x=>x._k===c.dataset.key);if(p){S.editP=p;S.editCode=p.code;S.screen="detail";render();}}));
@@ -275,31 +277,32 @@ function bindAll(){
 }
 
 async function checkPin(){
+  if(S._pinChecking)return;
   // Client-side lockout (server also rate-limits)
   if(S.pinLockUntil>Date.now()){const secs=Math.ceil((S.pinLockUntil-Date.now())/1000);toast("Locked for "+secs+"s","err");S.pinVal="";render();return;}
+  S._pinChecking=true;
   // Ensure auth is ready before calling Cloud Functions
   await _authP;
-  if(!_authUid){try{await signInAnonymously(auth);}catch(e){toast("Auth failed — check connection","err");S.pinVal="";render();return;}}
+  if(!_authUid){try{await signInAnonymously(auth);}catch(e){toast("Auth failed — check connection","err");S.pinVal="";S._pinChecking=false;render();return;}}
   try{
     await fnVerifyPin({unit:S.pinTarget,pin:S.pinVal});
-    // Success — server already logged audit
-    try{navigator.vibrate(80);}catch(e){}
+    try{navigator.vibrate(60);}catch(e){}
     S.pinFails=0;S.pinLockUntil=0;S.pinOk=true;render();
-    await new Promise(r=>setTimeout(r,400));
-    S.pinOk=false;
+    await new Promise(r=>setTimeout(r,150));
+    S.pinOk=false;S._pinChecking=false;
     if(S.pinTarget==="ADMIN"){S.adminPin=S.pinVal;S.screen="admin";S.adminTab="overview";audit("admin_access","ADMIN","");await listenAll();}
     else{S.screen="ward";S.filter="all";S.search="";S._bp=true;await listenUnit(S.pinTarget);}
     render();
   }catch(e){
-    try{navigator.vibrate([40,30,40,30,40]);}catch(x){}
+    try{navigator.vibrate([30,20,30,20,30]);}catch(x){}
     const code=e.code||"";
     if(code==="functions/resource-exhausted"){S.pinLockUntil=Date.now()+60000;toast("Too many attempts. Locked.","err");}
     else if(code==="functions/permission-denied"||code==="functions/not-found"){
       S.pinFails++;if(S.pinFails>=5){S.pinLockUntil=Date.now()+60000*Math.min(S.pinFails-4,5);toast("Too many attempts. Locked.","err");}
     }else{toast("Error: "+(e.message||"offline"),"err");}
     S.pinError=true;render();
-    await new Promise(r=>setTimeout(r,600));
-    S.pinError=false;S.pinVal="";render();
+    await new Promise(r=>setTimeout(r,450));
+    S.pinError=false;S.pinVal="";S._pinChecking=false;render();
   }
 }
 
@@ -390,14 +393,9 @@ async function boot(){try{
 }catch(e){showFatal("Boot Error: "+e.message);}}
 boot();
 
-// Service Worker registration
+// Service Worker registration — only update if new version available
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.getRegistrations()
-    .then(rs=>Promise.all(rs.map(r=>r.unregister())))
-    .catch(()=>{})
-    .finally(()=>{
-      navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
-        .then(r=>r.update())
-        .catch(err=>console.warn("Service worker registration failed",err));
-    });
+  navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
+    .then(r=>{r.update().catch(()=>{});})
+    .catch(err=>console.warn("SW registration failed",err));
 }

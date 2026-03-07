@@ -131,23 +131,25 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 .btnd:active{opacity:.8;transform:scale(.95)}
 
 /* PIN Screen */
-.pin-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg);position:relative}
-.pin-body::before{content:'';position:absolute;top:10%;left:50%;transform:translateX(-50%);width:200px;height:200px;background:radial-gradient(circle,rgba(37,99,235,.04) 0%,transparent 70%);pointer-events:none}
-.pin-body.pin-shake{animation:pinShake .5s cubic-bezier(.36,.07,.19,.97)}
-@keyframes pinShake{0%,100%{transform:translateX(0)}10%,50%,90%{transform:translateX(-10px)}30%,70%{transform:translateX(10px)}}
-.pin-icon{width:68px;height:68px;border-radius:20px;background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);display:flex;align-items:center;justify-content:center;margin-bottom:24px;box-shadow:0 8px 32px rgba(37,99,235,.2);position:relative;z-index:1}
-.pin-title{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:28px;position:relative;z-index:1;transition:color .3s}
-.pin-dots{display:flex;gap:16px;margin-bottom:36px;position:relative;z-index:1}
-.pdot{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--border2);transition:all .2s cubic-bezier(.34,1.56,.64,1);background:transparent}
-.pdot.f{background:var(--acc);border-color:var(--acc);transform:scale(1.25);box-shadow:0 0 14px rgba(37,99,235,.3)}
-.pdot.err{background:var(--r);border-color:var(--r);box-shadow:0 0 14px rgba(239,68,68,.3);transform:scale(1.25)}
-.pdot.ok{background:var(--g);border-color:var(--g);box-shadow:0 0 14px rgba(16,185,129,.3);transform:scale(1.25)}
-.pkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:260px;width:100%;position:relative;z-index:1}
-.pkey{width:68px;height:68px;border-radius:50%;border:1px solid var(--border);background:var(--card);font-size:24px;font-weight:600;color:var(--txt);cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .12s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow);-webkit-user-select:none;user-select:none}
-.pkey:active{background:linear-gradient(135deg,#2563eb,#1d4ed8);border-color:#2563eb;transform:scale(.85);color:#fff;box-shadow:0 0 20px rgba(37,99,235,.3)}
-.pkey.del{background:transparent;border:none;box-shadow:none;color:var(--muted);font-size:14px}
-.pkey.del:active{background:rgba(239,68,68,.08);color:var(--r);border:none;box-shadow:none}
-.pin-err{color:var(--r);font-weight:600;font-size:13px;margin-bottom:14px;position:relative;z-index:1;animation:fadeIn .3s}
+.pin-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 20px 40px;background:linear-gradient(180deg,#f0f4f8 0%,#e8eef6 50%,#dde6f0 100%);position:relative;overflow:hidden}
+.pin-body::before{content:'';position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:400px;height:400px;background:radial-gradient(circle,rgba(37,99,235,.06) 0%,rgba(30,64,175,.02) 40%,transparent 70%);pointer-events:none}
+.pin-body::after{content:'';position:absolute;bottom:-10%;left:50%;transform:translateX(-50%);width:300px;height:300px;background:radial-gradient(circle,rgba(37,99,235,.03) 0%,transparent 60%);pointer-events:none}
+.pin-body.pin-shake{animation:pinShake .45s cubic-bezier(.36,.07,.19,.97)}
+@keyframes pinShake{0%,100%{transform:translateX(0)}15%,55%{transform:translateX(-12px)}35%,75%{transform:translateX(12px)}95%{transform:translateX(-4px)}}
+.pin-icon{width:72px;height:72px;border-radius:22px;background:linear-gradient(145deg,#2563eb 0%,#1e40af 100%);display:flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 8px 24px rgba(37,99,235,.25),0 2px 8px rgba(37,99,235,.15);position:relative;z-index:1}
+.pin-title{font-size:15px;color:var(--pri);font-weight:700;margin-bottom:24px;position:relative;z-index:1;transition:color .25s,opacity .25s;letter-spacing:-.2px}
+.pin-title.t-err{color:var(--r);animation:fadeIn .25s}
+.pin-dots{display:flex;gap:18px;margin-bottom:40px;position:relative;z-index:1}
+.pdot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);transition:all .15s cubic-bezier(.34,1.56,.64,1);background:transparent}
+.pdot.f{background:var(--acc);border-color:var(--acc);transform:scale(1.3);box-shadow:0 0 12px rgba(37,99,235,.35)}
+.pdot.err{background:var(--r);border-color:var(--r);box-shadow:0 0 12px rgba(239,68,68,.35);transform:scale(1.3)}
+.pdot.ok{background:var(--g);border-color:var(--g);box-shadow:0 0 12px rgba(16,185,129,.35);transform:scale(1.3)}
+.pkeys{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:280px;width:100%;position:relative;z-index:1}
+.pkey{width:72px;height:72px;border-radius:50%;border:none;background:rgba(255,255,255,.85);font-size:26px;font-weight:700;color:var(--txt);cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:all .1s ease;box-shadow:0 2px 8px rgba(15,23,42,.06),0 0 0 1px rgba(15,23,42,.04);-webkit-user-select:none;user-select:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.pkey:active{background:var(--acc);transform:scale(.88);color:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+.pkey.del{background:transparent;box-shadow:none;color:var(--muted);font-size:22px;font-weight:600}
+.pkey.del:active{background:rgba(239,68,68,.06);color:var(--r);box-shadow:none;transform:scale(.88)}
+.pin-err{color:var(--r);font-weight:600;font-size:13px;margin-bottom:14px;position:relative;z-index:1;animation:fadeIn .25s}
 
 /* Unit Cards (Home) */
 .uc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:10px;transition:transform .15s ease}
