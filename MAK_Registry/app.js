@@ -297,8 +297,8 @@ function updatePinDisplay(){
 }
 
 function bindAll(){
-  document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.screen="pin";render();}));
-  const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.screen="pin";render();});
+  document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S.screen="pin";render();}));
+  const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S.screen="pin";render();});
   const bb=$("bb");if(bb)bb.addEventListener("click",()=>{if(S.screen==="ward"||S.screen==="admin"){S.screen="home";S.showCivil={};render();}else if(S.screen==="detail"||S.screen==="add"){S.screen="ward";render();}else if(S.screen==="pin"){S.screen="home";render();}});
   const bdl=$("bdl");if(bdl)bdl.addEventListener("click",()=>backupPNG());
   const tc=$("tc");if(tc&&S.editP)tc.addEventListener("click",e=>{e.stopPropagation();const show=!S.showCivil[S.editP._k];S.showCivil[S.editP._k]=show;if(show)audit("view_civil",S.unit,S.editP.name);render();});

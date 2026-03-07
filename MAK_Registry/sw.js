@@ -1,4 +1,4 @@
-const CACHE = "mak-v27";
+const CACHE = "mak-v28";
 
 const PRECACHE = [
   "/",
