@@ -1,4 +1,4 @@
-const CACHE = "mak-v20";
+const CACHE = "mak-v21";
 
 const PRECACHE = [
   "/",
@@ -6,6 +6,10 @@ const PRECACHE = [
   "/boot.js",
   "/app.js",
   "/manifest.json",
+  "/images/icon-48x48.png",
+  "/images/icon-192x192.png",
+  "/images/icon-512x512.png",
+  "/images/apple-icon-180x180.png",
   "/icon-192.png",
   "/icon-512.png",
   "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",

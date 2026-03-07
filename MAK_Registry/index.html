@@ -9,8 +9,11 @@
 <meta name="apple-mobile-web-app-title" content="MedEvac">
 <meta name="theme-color" content="#1e40af">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com https://*.gstatic.com https://fonts.googleapis.com; frame-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com; script-src 'self' https://*.gstatic.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://*.googleapis.com https://*.gstatic.com https://generativelanguage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.cloudfunctions.net https://api.anthropic.com; font-src https://fonts.gstatic.com">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="48x48" href="/images/icon-48x48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/icon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/images/icon-512x512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/images/apple-icon-180x180.png">
 <title>MedEvac</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -38,6 +41,17 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 #app::before{content:'';position:fixed;top:-40%;left:-20%;width:80%;height:80%;background:radial-gradient(ellipse,rgba(37,99,235,.03) 0%,transparent 70%);pointer-events:none;z-index:0}
 .screen{display:flex;flex-direction:column;height:100%;opacity:0;animation:fadeIn .3s cubic-bezier(.4,0,.2,1) forwards;position:relative;z-index:1}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes launchPulse{0%{transform:translateY(0);opacity:.5}50%{transform:translateY(-6px);opacity:1}100%{transform:translateY(0);opacity:.5}}
+#launch-splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f172a,#1e3a8a 45%,#2563eb);color:#fff;z-index:9999;transition:opacity .4s ease,transform .4s ease;backdrop-filter:blur(10px)}
+#launch-splash.hide{opacity:0;transform:translateY(-16px);pointer-events:none}
+.launch-splash__card{text-align:center;max-width:320px;padding:32px 28px;border-radius:32px;background:rgba(15,23,42,.6);box-shadow:0 20px 60px rgba(15,23,42,.55);border:1px solid rgba(255,255,255,.12)}
+.launch-splash__logo{width:108px;height:108px;border-radius:26px;overflow:hidden;margin:0 auto 18px;box-shadow:0 20px 40px rgba(15,23,42,.5);border:1px solid rgba(255,255,255,.2)}
+.launch-splash__logo img{width:100%;height:100%;object-fit:cover}
+.launch-splash__title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.launch-splash__subtitle{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:18px;line-height:1.5}
+.launch-splash__dots{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.launch-splash__dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.4);animation:launchPulse 1s ease-in-out infinite}
+.launch-splash__dot:nth-child(2){animation-delay:.15s}.launch-splash__dot:nth-child(3){animation-delay:.3s}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 @keyframes pulse2{0%,100%{opacity:.4}50%{opacity:1}}
@@ -306,6 +320,21 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
   <div class="pwa-wt__caption">Install MedEvac</div>
   <div class="pwa-wt__subcap">Tap Share, then "Add to Home Screen"</div>
   <div class="pwa-wt__arrow down" id="wt-arrow-down"></div>
+</div>
+
+<div class="launch-splash" id="launch-splash" aria-live="polite" aria-label="MedEvac launch screen">
+  <div class="launch-splash__card">
+    <div class="launch-splash__logo">
+      <img src="/images/icon-512x512.png" alt="MedEvac logo">
+    </div>
+    <div class="launch-splash__title">MedEvac</div>
+    <div class="launch-splash__subtitle">Emergency-ready registry · instant access · works offline</div>
+    <div class="launch-splash__dots">
+      <span class="launch-splash__dot"></span>
+      <span class="launch-splash__dot"></span>
+      <span class="launch-splash__dot"></span>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="app.js"></script>

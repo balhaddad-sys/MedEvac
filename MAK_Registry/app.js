@@ -207,6 +207,13 @@ function render(){
   app.innerHTML=h;bindAll();updatePinDisplay();resetT();}catch(e){console.error(e);}
 }
 
+function hideLaunchSplash(){
+  const splash=$("launch-splash");
+  if(!splash)return;
+  splash.classList.add("hide");
+  splash.addEventListener("transitionend",()=>{if(splash.parentElement)splash.parentElement.removeChild(splash);},{once:true});
+}
+
 function vHome(){
   const cnt={};["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{cnt[u+"_"+g]=Object.keys(S.allData[u+"_"+g]||{}).length;}));
   const total=Object.values(cnt).reduce((a,b)=>a+b,0);
@@ -407,7 +414,7 @@ async function boot(){try{
   await _authP;
   // Fetch Gemini key after auth
   get(ref(db,"config/claudeKey")).then(s=>{if(s.exists())GK=s.val();}).catch(()=>{});
-  await listenAll();S.screen="home";render();if(navigator.onLine)await syncQueue();
+  await listenAll();S.screen="home";render();hideLaunchSplash();if(navigator.onLine)await syncQueue();
 }catch(e){showFatal("Boot Error: "+e.message);}}
 boot();
 
