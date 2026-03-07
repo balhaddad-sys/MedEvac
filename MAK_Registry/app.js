@@ -204,7 +204,7 @@ function render(){
   try{let h="";const s=S.screen;
   if(s==="home")h=vHome();else if(s==="pin")h=vPin();else if(s==="ward")h=vWard();
   else if(s==="detail")h=vDetail();else if(s==="add")h=vAdd();else if(s==="admin")h=vAdmin();
-  app.innerHTML=h;bindAll();resetT();}catch(e){console.error(e);}
+  app.innerHTML=h;bindAll();updatePinDisplay();resetT();}catch(e){console.error(e);}
 }
 
 function vHome(){
@@ -218,7 +218,7 @@ function vPin(){
   const dotCls=S.pinError?"err":S.pinOk?"ok":"f";
   const titleCls=S.pinError?" t-err":"";
   const titleTxt=S.pinError?"Wrong PIN":S.pinOk?"Verified":"Enter PIN";
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>'+(isA?"Admin":"Unit "+u+" \u2014 "+g)+'</h1></div><div style="width:36px"></div></div><div class="pin-body'+(S.pinError?" pin-shake":"")+'"><div class="pin-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="pin-title'+titleCls+'">'+titleTxt+'</div><div class="pin-dots">'+[0,1,2,3].map(i=>'<div class="pdot'+(i<S.pinVal.length?" "+dotCls:"")+'"></div>').join("")+'</div><div class="pkeys">'+[[1,2,3],[4,5,6],[7,8,9],["",0,"\u232b"]].map(r=>r.map(k=>k===""?'<div></div>':'<button class="pkey'+(k==="\u232b"?" del":"")+'" data-pin="'+k+'">'+k+'</button>').join("")).join("")+'</div></div></div>';
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>'+(isA?"Admin":"Unit "+u+" \u2014 "+g)+'</h1></div><div style="width:36px"></div></div><div class="pin-body'+(S.pinError?" pin-shake":"")+'" id="pin-body"><div class="pin-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="pin-title'+titleCls+'" id="pin-title">'+titleTxt+'</div><div class="pin-dots" id="pin-dots">'+[0,1,2,3].map(i=>'<div class="pdot'+(i<S.pinVal.length?" "+dotCls:"")+'" data-idx="'+i+'"></div>').join("")+'</div><div class="pkeys">'+[[1,2,3],[4,5,6],[7,8,9],["",0,"\u232b"]].map(r=>r.map(k=>k===""?'<div></div>':'<button class="pkey'+(k==="\u232b"?" del":"")+'" data-pin="'+k+'">'+k+'</button>').join("")).join("")+'</div></div></div>';
 }
 
 function vWard(){
@@ -243,13 +243,31 @@ function vAdmin(){
   return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Admin</h1></div><div style="width:36px"></div></div><div class="tabs">'+tabs.map(t=>'<div class="tab'+(S.adminTab===t.id?" act":"")+'" data-tab="'+t.id+'">'+t.l+'</div>').join("")+'</div><div class="sp" style="padding:10px 12px 80px">'+c+'</div></div>';
 }
 
+function updatePinDisplay(){
+  if(S.screen!=="pin")return;
+  const body=$("pin-body");
+  if(body)body.classList.toggle("pin-shake",S.pinError);
+  const titleEl=$("pin-title");
+  if(titleEl){
+    titleEl.textContent=S.pinError?"Wrong PIN":S.pinOk?"Verified":"Enter PIN";
+    titleEl.classList.toggle("t-err",S.pinError);
+  }
+  const dots=document.querySelectorAll("#pin-dots .pdot");
+  const len=S.pinVal.length;
+  dots.forEach((dot,idx)=>{dot.classList.remove("f","ok","err");
+    if(S.pinOk)dot.classList.add("ok");
+    else if(S.pinError&&idx<len)dot.classList.add("err");
+    else if(idx<len)dot.classList.add("f");
+  });
+}
+
 function bindAll(){
   document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.screen="pin";render();}));
   const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.screen="pin";render();});
   const bb=$("bb");if(bb)bb.addEventListener("click",()=>{if(S.screen==="ward"||S.screen==="admin"){S.screen="home";S.showCivil={};render();}else if(S.screen==="detail"||S.screen==="add"){S.screen="ward";render();}else if(S.screen==="pin"){S.screen="home";render();}});
   const bdl=$("bdl");if(bdl)bdl.addEventListener("click",()=>backupPNG());
   const tc=$("tc");if(tc&&S.editP)tc.addEventListener("click",e=>{e.stopPropagation();const show=!S.showCivil[S.editP._k];S.showCivil[S.editP._k]=show;if(show)audit("view_civil",S.unit,S.editP.name);render();});
-  document.querySelectorAll("[data-pin]").forEach(k=>k.addEventListener("click",()=>{if(S.pinOk||S._pinChecking)return;const v=k.dataset.pin;if(v==="\u232b"){S.pinVal=S.pinVal.slice(0,-1);try{navigator.vibrate(30);}catch(e){}}else if(S.pinVal.length<4){S.pinVal+=v;try{navigator.vibrate(15);}catch(e){}}S.pinError=false;S.pinOk=false;render();if(S.pinVal.length===4)checkPin();}));
+  document.querySelectorAll("[data-pin]").forEach(k=>k.addEventListener("click",()=>{if(S.pinOk||S._pinChecking)return;const v=k.dataset.pin;if(v==="\u232b"){S.pinVal=S.pinVal.slice(0,-1);try{navigator.vibrate(30);}catch(e){}}else if(S.pinVal.length<4){S.pinVal+=v;try{navigator.vibrate(15);}catch(e){}}S.pinError=false;S.pinOk=false;updatePinDisplay();if(S.pinVal.length===4)checkPin();}));
   document.querySelectorAll("[data-filt]").forEach(f=>f.addEventListener("click",()=>{S.filter=f.dataset.filt;render();}));
   const si=$("si");if(si)si.addEventListener("input",e=>{S.search=e.target.value;render();});
   document.querySelectorAll(".pc").forEach(c=>c.addEventListener("click",()=>{const p=S.patients.find(x=>x._k===c.dataset.key);if(p){S.editP=p;S.editCode=p.code;S.screen="detail";render();}}));
