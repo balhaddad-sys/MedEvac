@@ -245,29 +245,27 @@ function vAdd(){
 function vAdmin(){
   const tabs=[{id:"overview",l:"Overview"},{id:"ocr",l:"OCR"},{id:"pins",l:"Security"}];let c="";
   if(S.adminTab==="overview"){
-    // Global search + filter bar
     const allPatients=[];
     ["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{const uid=u+"_"+g;Object.entries(S.allData[uid]||{}).forEach(([k,v])=>allPatients.push({...v,_k:k,_uid:uid,_unit:u,_gender:g}));}));
     const totalAll=allPatients.length,totalG=allPatients.filter(p=>p.code==1).length,totalY=allPatients.filter(p=>p.code==2).length,totalR=allPatients.filter(p=>p.code>=3).length;
     const q=S.adminSearch?S.adminSearch.toLowerCase():"";
-    c='<div class="adm-summary"><div class="adm-stat"><div class="adm-n" style="color:var(--acc)">'+totalAll+'</div><div class="adm-l">All</div></div><div class="adm-stat"><div class="adm-n" style="color:var(--g)">'+totalG+'</div><div class="adm-l">Green</div></div><div class="adm-stat"><div class="adm-n" style="color:var(--y)">'+totalY+'</div><div class="adm-l">Yellow</div></div><div class="adm-stat"><div class="adm-n" style="color:var(--r)">'+totalR+'</div><div class="adm-l">Red</div></div></div>'
-    +'<div style="margin-bottom:10px"><input class="sinp" id="adm-search" placeholder="Search all patients..." value="'+esc(S.adminSearch)+'" style="width:100%"></div>'
-    +'<div class="adm-filters"><div class="adm-flt'+(S.adminFilter==="all"?" act":"")+'" data-af="all">All</div><div class="adm-flt'+(S.adminFilter==="r"?" act":"")+'" data-af="r" style="color:var(--r)">Red</div><div class="adm-flt'+(S.adminFilter==="2"?" act":"")+'" data-af="2" style="color:var(--y)">Yellow</div><div class="adm-flt'+(S.adminFilter==="1"?" act":"")+'" data-af="1" style="color:var(--g)">Green</div></div>';
+    c='<div class="adm-hero"><div class="adm-hero-title">Hospital Overview</div><div class="adm-summary"><div class="adm-stat"><div class="adm-n">'+totalAll+'</div><div class="adm-l">Total</div></div><div class="adm-stat"><div class="adm-n" style="color:#86efac">'+totalG+'</div><div class="adm-l">Green</div></div><div class="adm-stat"><div class="adm-n" style="color:#fde68a">'+totalY+'</div><div class="adm-l">Yellow</div></div><div class="adm-stat"><div class="adm-n" style="color:#fca5a5">'+totalR+'</div><div class="adm-l">Red</div></div></div></div>'
+    +'<div class="adm-search-wrap"><input class="sinp" id="adm-search" placeholder="Search patients by name, ID, or ward..." value="'+esc(S.adminSearch)+'"><div class="adm-search-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div></div>'
+    +'<div class="adm-filters"><div class="adm-flt'+(S.adminFilter==="all"?" act":"")+'" data-af="all"><div class="adm-flt-n">'+totalAll+'</div><div class="adm-flt-l">All</div></div><div class="adm-flt'+(S.adminFilter==="r"?" act":"")+'" data-af="r"'+(S.adminFilter!=="r"?' style="color:var(--r)"':'')+'><div class="adm-flt-n">'+totalR+'</div><div class="adm-flt-l">Critical</div></div><div class="adm-flt'+(S.adminFilter==="2"?" act":"")+'" data-af="2"'+(S.adminFilter!=="2"?' style="color:var(--y)"':'')+'><div class="adm-flt-n">'+totalY+'</div><div class="adm-flt-l">Yellow</div></div><div class="adm-flt'+(S.adminFilter==="1"?" act":"")+'" data-af="1"'+(S.adminFilter!=="1"?' style="color:var(--g)"':'')+'><div class="adm-flt-n">'+totalG+'</div><div class="adm-flt-l">Green</div></div></div>';
     c+=["A","B","C","D","E"].map(u=>{
       const m=Object.entries(S.allData[u+"_M"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_M",_g:"M"}));
       const f=Object.entries(S.allData[u+"_F"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_F",_g:"F"}));
       let all=[...m,...f].sort((a,b)=>(b.code||0)-(a.code||0));
-      // Apply filter
       if(S.adminFilter==="1")all=all.filter(p=>p.code==1);
       else if(S.adminFilter==="2")all=all.filter(p=>p.code==2);
       else if(S.adminFilter==="r")all=all.filter(p=>p.code>=3);
-      // Apply search
       if(q)all=all.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.civil||"").includes(q)||(p.ward||"").toLowerCase().includes(q));
+      const mCnt=all.filter(p=>p._g==="M").length,fCnt=all.filter(p=>p._g==="F").length;
       const gC=all.filter(p=>p.code==1).length,yC=all.filter(p=>p.code==2).length,rC=all.filter(p=>p.code>=3).length;
       const isOpen=S.expandedUnits[u];
-      const chevron='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform .2s;transform:rotate('+(isOpen?"180":"0")+'deg)"><polyline points="6 9 12 15 18 9"/></svg>';
-      return'<div class="acc-unit"><div class="acc-hdr" data-toggle="'+u+'"><div class="acc-hdr-l"><span class="acc-name">Unit '+u+'</span><span class="acc-cnt">'+all.length+'</span></div><div class="acc-hdr-r"><span class="acc-badge" style="background:var(--gbg);color:var(--g)">'+gC+'</span><span class="acc-badge" style="background:var(--ybg);color:var(--y)">'+yC+'</span><span class="acc-badge" style="background:var(--rbg);color:var(--r)">'+rC+'</span>'+chevron+'</div></div>'
-      +(isOpen?'<div class="acc-body">'+(all.length?all.map(p=>{const c2=cc(p.code);return'<div class="acc-row"><div class="acc-strip '+c2.cls+'"></div><div class="acc-row-body"><div class="acc-row-main"><div class="acc-pname">'+esc(p.name)+'</div><div class="acc-pmeta"><span>'+esc(p.ward||"-")+'</span><span>'+esc(p._g==="F"?"F":"M")+'</span></div></div><div class="acc-row-code '+c2.cls+'">'+p.code+'</div></div></div>';}).join(""):'<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">No patients</div>')+'</div>':'')
+      const chevron='<div class="acc-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform .2s;transform:rotate('+(isOpen?"180":"0")+'deg)"><polyline points="6 9 12 15 18 9"/></svg></div>';
+      return'<div class="acc-unit'+(isOpen?" open":"")+'"><div class="acc-hdr" data-toggle="'+u+'"><div class="acc-hdr-l"><div class="acc-unit-badge">'+u+'</div><div><div class="acc-name">Unit '+u+'</div><div class="acc-subtitle">'+mCnt+' male &middot; '+fCnt+' female</div></div></div><div class="acc-hdr-r"><span class="acc-badge bg">'+gC+'</span><span class="acc-badge by">'+yC+'</span><span class="acc-badge br">'+rC+'</span>'+chevron+'</div></div>'
+      +(isOpen?'<div class="acc-body">'+(all.length?all.map(p=>{const c2=cc(p.code);return'<div class="acc-row"><div class="acc-strip '+c2.cls+'"></div><div class="acc-row-body"><div class="acc-row-main"><div class="acc-pname">'+esc(p.name)+'</div><div class="acc-pmeta"><span>'+esc(p.ward||"-")+'</span><span>'+(p._g==="F"?"Female":"Male")+'</span><span>'+c2.label+'</span></div></div><div class="acc-row-code '+c2.cls+'">'+p.code+'</div></div></div>';}).join(""):'<div class="acc-empty">No patients match current filters</div>')+'</div>':'')
       +'</div>';
     }).join("");
   }
