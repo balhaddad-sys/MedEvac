@@ -305,6 +305,12 @@ html,body{height:100%;background:var(--bg);color:var(--txt);
 .acc-row-code{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0;border:1.5px solid}
 .acc-row-code.green{background:var(--gbg);color:var(--g);border-color:var(--gbd)}.acc-row-code.yellow{background:var(--ybg);color:var(--y);border-color:var(--ybd)}.acc-row-code.red{background:var(--rbg);color:var(--r);border-color:var(--rbd)}.acc-row-code.critical{background:#fef2f2;color:#dc2626;border-color:#fecaca}
 .acc-empty{padding:24px 20px;text-align:center;color:var(--muted);font-size:12px;font-weight:600}
+.acc-gender-section{padding:0 0 4px}
+.acc-gender-section+.acc-gender-section{border-top:1.5px dashed var(--border)}
+.acc-gender-hdr{display:flex;align-items:center;gap:6px;padding:10px 14px 6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.acc-gender-hdr.male{color:#2563eb}
+.acc-gender-hdr.female{color:#d946ef}
+.acc-gender-cnt{font-size:10px;font-weight:800;background:var(--bg);padding:1px 8px;border-radius:10px;border:1px solid var(--border);color:var(--muted)}
 
 /* PWA Walkthrough */
 .pwa-wt{display:none;position:fixed;left:50%;transform:translateX(-50%);width:280px;z-index:10000;background:rgba(255,255,255,.97);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-radius:24px;padding:14px;box-shadow:0 24px 64px rgba(0,0,0,.15);text-align:center;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;border:1px solid rgba(0,0,0,.06);animation:wt-in .35s cubic-bezier(.22,1,.36,1)}

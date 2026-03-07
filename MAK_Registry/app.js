@@ -147,7 +147,7 @@ function openInstallPrompt(){
   else hint.textContent="Open the browser menu (three dots) and choose Add to Home screen.";
 }
 
-let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinOk:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:"",expandedUnits:{},adminSearch:"",adminFilter:"all"};
+let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinOk:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:"",expandedUnits:{},adminSearch:"",adminFilter:"all",_pinNeedsLayout:true};
 async function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;
   // Load cached data immediately
   const cached=await LS.load("patients_"+uid);
@@ -200,7 +200,12 @@ function backupPNG(){
   const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="MedEvac_"+S.unit+".png";document.body.appendChild(a);a.click();document.body.removeChild(a);audit("backup_export",S.unit,S.patients.length+" patients");toast("Backup saved");
 }
 
-function render(){
+function render(force=false){
+  if(!force&&S.screen==="pin"&&!S.pinOk&&!S.pinError&&S.pinVal.length<4&&!S._pinNeedsLayout){
+    updatePinDisplay();
+    return;
+  }
+  S._pinNeedsLayout=false;
   try{let h="";const s=S.screen;
   if(s==="home")h=vHome();else if(s==="pin")h=vPin();else if(s==="ward")h=vWard();
   else if(s==="detail")h=vDetail();else if(s==="add")h=vAdd();else if(s==="admin")h=vAdmin();
@@ -252,20 +257,25 @@ function vAdmin(){
     c='<div class="adm-hero"><div class="adm-hero-title">Hospital Overview</div><div class="adm-summary"><div class="adm-stat"><div class="adm-n">'+totalAll+'</div><div class="adm-l">Total</div></div><div class="adm-stat"><div class="adm-n" style="color:#86efac">'+totalG+'</div><div class="adm-l">Green</div></div><div class="adm-stat"><div class="adm-n" style="color:#fde68a">'+totalY+'</div><div class="adm-l">Yellow</div></div><div class="adm-stat"><div class="adm-n" style="color:#fca5a5">'+totalR+'</div><div class="adm-l">Red</div></div></div></div>'
     +'<div class="adm-search-wrap"><input class="sinp" id="adm-search" placeholder="Search patients by name, ID, or ward..." value="'+esc(S.adminSearch)+'"><div class="adm-search-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div></div>'
     +'<div class="adm-filters"><div class="adm-flt'+(S.adminFilter==="all"?" act":"")+'" data-af="all"><div class="adm-flt-n">'+totalAll+'</div><div class="adm-flt-l">All</div></div><div class="adm-flt'+(S.adminFilter==="r"?" act":"")+'" data-af="r"'+(S.adminFilter!=="r"?' style="color:var(--r)"':'')+'><div class="adm-flt-n">'+totalR+'</div><div class="adm-flt-l">Critical</div></div><div class="adm-flt'+(S.adminFilter==="2"?" act":"")+'" data-af="2"'+(S.adminFilter!=="2"?' style="color:var(--y)"':'')+'><div class="adm-flt-n">'+totalY+'</div><div class="adm-flt-l">Yellow</div></div><div class="adm-flt'+(S.adminFilter==="1"?" act":"")+'" data-af="1"'+(S.adminFilter!=="1"?' style="color:var(--g)"':'')+'><div class="adm-flt-n">'+totalG+'</div><div class="adm-flt-l">Green</div></div></div>';
+    const _filterPats=list=>{
+      let r=list.sort((a,b)=>(b.code||0)-(a.code||0));
+      if(S.adminFilter==="1")r=r.filter(p=>p.code==1);
+      else if(S.adminFilter==="2")r=r.filter(p=>p.code==2);
+      else if(S.adminFilter==="r")r=r.filter(p=>p.code>=3);
+      if(q)r=r.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.civil||"").includes(q)||(p.ward||"").toLowerCase().includes(q));
+      return r;
+    };
+    const _renderRows=list=>list.length?list.map(p=>{const c2=cc(p.code);return'<div class="acc-row"><div class="acc-strip '+c2.cls+'"></div><div class="acc-row-body"><div class="acc-row-main"><div class="acc-pname">'+esc(p.name)+'</div><div class="acc-pmeta"><span>'+esc(p.ward||"-")+'</span><span>'+c2.label+'</span></div></div><div class="acc-row-code '+c2.cls+'">'+p.code+'</div></div></div>';}).join(""):'<div class="acc-empty">No patients match</div>';
     c+=["A","B","C","D","E"].map(u=>{
-      const m=Object.entries(S.allData[u+"_M"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_M",_g:"M"}));
-      const f=Object.entries(S.allData[u+"_F"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_F",_g:"F"}));
-      let all=[...m,...f].sort((a,b)=>(b.code||0)-(a.code||0));
-      if(S.adminFilter==="1")all=all.filter(p=>p.code==1);
-      else if(S.adminFilter==="2")all=all.filter(p=>p.code==2);
-      else if(S.adminFilter==="r")all=all.filter(p=>p.code>=3);
-      if(q)all=all.filter(p=>(p.name||"").toLowerCase().includes(q)||(p.civil||"").includes(q)||(p.ward||"").toLowerCase().includes(q));
-      const mCnt=all.filter(p=>p._g==="M").length,fCnt=all.filter(p=>p._g==="F").length;
-      const gC=all.filter(p=>p.code==1).length,yC=all.filter(p=>p.code==2).length,rC=all.filter(p=>p.code>=3).length;
+      const mAll=Object.entries(S.allData[u+"_M"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_M",_g:"M"}));
+      const fAll=Object.entries(S.allData[u+"_F"]||{}).map(([k,v])=>({...v,_k:k,_uid:u+"_F",_g:"F"}));
+      const mFiltered=_filterPats([...mAll]),fFiltered=_filterPats([...fAll]);
+      const total=mFiltered.length+fFiltered.length;
+      const gC=[...mFiltered,...fFiltered].filter(p=>p.code==1).length,yC=[...mFiltered,...fFiltered].filter(p=>p.code==2).length,rC=[...mFiltered,...fFiltered].filter(p=>p.code>=3).length;
       const isOpen=S.expandedUnits[u];
       const chevron='<div class="acc-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="transition:transform .2s;transform:rotate('+(isOpen?"180":"0")+'deg)"><polyline points="6 9 12 15 18 9"/></svg></div>';
-      return'<div class="acc-unit'+(isOpen?" open":"")+'"><div class="acc-hdr" data-toggle="'+u+'"><div class="acc-hdr-l"><div class="acc-unit-badge">'+u+'</div><div><div class="acc-name">Unit '+u+'</div><div class="acc-subtitle">'+mCnt+' male &middot; '+fCnt+' female</div></div></div><div class="acc-hdr-r"><span class="acc-badge bg">'+gC+'</span><span class="acc-badge by">'+yC+'</span><span class="acc-badge br">'+rC+'</span>'+chevron+'</div></div>'
-      +(isOpen?'<div class="acc-body">'+(all.length?all.map(p=>{const c2=cc(p.code);return'<div class="acc-row"><div class="acc-strip '+c2.cls+'"></div><div class="acc-row-body"><div class="acc-row-main"><div class="acc-pname">'+esc(p.name)+'</div><div class="acc-pmeta"><span>'+esc(p.ward||"-")+'</span><span>'+(p._g==="F"?"Female":"Male")+'</span><span>'+c2.label+'</span></div></div><div class="acc-row-code '+c2.cls+'">'+p.code+'</div></div></div>';}).join(""):'<div class="acc-empty">No patients match current filters</div>')+'</div>':'')
+      return'<div class="acc-unit'+(isOpen?" open":"")+'"><div class="acc-hdr" data-toggle="'+u+'"><div class="acc-hdr-l"><div class="acc-unit-badge">'+u+'</div><div><div class="acc-name">Unit '+u+'</div><div class="acc-subtitle">'+mFiltered.length+' male &middot; '+fFiltered.length+' female</div></div></div><div class="acc-hdr-r"><span class="acc-badge bg">'+gC+'</span><span class="acc-badge by">'+yC+'</span><span class="acc-badge br">'+rC+'</span>'+chevron+'</div></div>'
+      +(isOpen?'<div class="acc-body">'+(total?'<div class="acc-gender-section"><div class="acc-gender-hdr male"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07"/><path d="M15 6l3-3"/><path d="M18 3h-3"/><path d="M18 3v3"/></svg> Male <span class="acc-gender-cnt">'+mFiltered.length+'</span></div>'+(mFiltered.length?_renderRows(mFiltered):'<div class="acc-empty">No male patients</div>')+'</div><div class="acc-gender-section"><div class="acc-gender-hdr female"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="8" r="5"/><path d="M12 13v8"/><path d="M9 18h6"/></svg> Female <span class="acc-gender-cnt">'+fFiltered.length+'</span></div>'+(fFiltered.length?_renderRows(fFiltered):'<div class="acc-empty">No female patients</div>')+'</div>':'<div class="acc-empty">No patients match current filters</div>')+'</div>':'')
       +'</div>';
     }).join("");
   }
@@ -297,8 +307,8 @@ function updatePinDisplay(){
 }
 
 function bindAll(){
-  document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S.screen="pin";render();}));
-  const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S.screen="pin";render();});
+  document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S._pinNeedsLayout=true;S.screen="pin";render();}));
+  const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S._pinNeedsLayout=true;S.screen="pin";render();});
   const bb=$("bb");if(bb)bb.addEventListener("click",()=>{if(S.screen==="ward"||S.screen==="admin"){S.screen="home";S.showCivil={};render();}else if(S.screen==="detail"||S.screen==="add"){S.screen="ward";render();}else if(S.screen==="pin"){S.screen="home";render();}});
   const bdl=$("bdl");if(bdl)bdl.addEventListener("click",()=>backupPNG());
   const tc=$("tc");if(tc&&S.editP)tc.addEventListener("click",e=>{e.stopPropagation();const show=!S.showCivil[S.editP._k];S.showCivil[S.editP._k]=show;if(show)audit("view_civil",S.unit,S.editP.name);render();});
