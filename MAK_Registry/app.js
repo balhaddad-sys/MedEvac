@@ -10,6 +10,7 @@ const fnVerifyPin=httpsCallable(fns,"verifyPin");
 const fnSetPin=httpsCallable(fns,"setPin");
 const fnHasPins=httpsCallable(fns,"hasPins");
 const fnOcrExtract=httpsCallable(fns,"ocrExtract");
+const fnGetAuditLog=httpsCallable(fns,"getAuditLog");
 let _authReady=false,_authUid=null;
 onAuthStateChanged(auth,u=>{_authUid=u?u.uid:null;_authReady=true;});
 let _authFailed=false;
@@ -619,7 +620,7 @@ function vAdd(){
 }
 
 function vAdmin(){
-  const tabs=[{id:"overview",l:"Overview"},{id:"ocr",l:"OCR"},{id:"pins",l:"Security"}];let c="";
+  const tabs=[{id:"overview",l:"Overview"},{id:"ocr",l:"OCR"},{id:"audit",l:"Audit"},{id:"pins",l:"Security"}];let c="";
   if(S.adminTab==="overview"){
     const allPatients=[];
     ["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{const uid=u+"_"+g;Object.entries(S.allData[uid]||{}).forEach(([k,v])=>allPatients.push({...v,_k:k,_uid:uid,_unit:u,_gender:g}));}));
@@ -679,6 +680,28 @@ function vAdmin(){
       c+='<button class="btn" id="oi"'+(validCount?'':' disabled')+' style="margin-top:12px">Import '+validCount+' Patient'+(validCount!==1?'s':'')+'</button>';
       if(validCount<S.ocrSel.length&&S.ocrSel.length)c+='<div style="font-size:10px;color:var(--r);font-weight:600;margin-top:6px;text-align:center">'+(S.ocrSel.length-validCount)+' selected patient'+(S.ocrSel.length-validCount!==1?'s have':' has')+' missing required fields</div>';
       c+='</div>';
+    }
+  }
+  else if(S.adminTab==="audit"){
+    if(!S._auditLog){
+      c='<div style="text-align:center;padding:40px"><button class="btn" id="bloadaudit">'+I.lock+' Load Audit Log</button><div style="font-size:11px;color:var(--muted);margin-top:8px">Requires admin PIN verification</div></div>';
+    }else if(S._auditLoading){
+      c='<div style="text-align:center;padding:40px"><div class="loader"></div><p style="margin-top:10px;color:var(--muted);font-size:12px">Loading audit log...</p></div>';
+    }else{
+      const entries=S._auditLog;
+      const actionIcons={login:"\u2705",login_fail:"\u274C",admin_access:"\uD83D\uDD12",pin_change:"\uD83D\uDD11",backup_export:"\uD83D\uDCBE",full_export:"\uD83D\uDCC4",ocr_import:"\uD83D\uDCF7",ocr_extract:"\uD83D\uDCF7",patient_add:"\u2795",patient_edit:"\u270F\uFE0F",patient_delete:"\uD83D\uDDD1\uFE0F"};
+      const actionLabels={login:"Login",login_fail:"Failed Login",admin_access:"Admin Access",pin_change:"PIN Changed",backup_export:"Backup Export",full_export:"Full Export",ocr_import:"OCR Import",ocr_extract:"OCR Extract",patient_add:"Patient Added",patient_edit:"Patient Edited",patient_delete:"Patient Deleted"};
+      c='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">'+entries.length+' recent events</div>';
+      if(!entries.length)c+='<div class="acc-empty">No audit entries</div>';
+      else c+=entries.map(e=>{
+        const d=new Date(e.ts);
+        const timeStr=d.toLocaleDateString("en",{month:"short",day:"numeric"})+' '+d.toLocaleTimeString("en",{hour:"2-digit",minute:"2-digit"});
+        const icon=actionIcons[e.action]||"\u2022";
+        const label=actionLabels[e.action]||e.action;
+        const isFail=e.action==="login_fail";
+        return'<div style="background:var(--card);border:1px solid '+(isFail?"var(--rbd)":"var(--border)")+';border-radius:var(--radius-xs);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)"><div style="font-size:18px;flex-shrink:0">'+icon+'</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:'+(isFail?"var(--r)":"var(--txt)")+'">'+esc(label)+'</div><div style="font-size:10px;color:var(--muted);margin-top:2px">'+esc(e.unit||"-")+(e.detail?" &middot; "+esc(e.detail):"")+'</div></div><div style="font-size:10px;color:var(--muted2);white-space:nowrap">'+timeStr+'</div></div>';
+      }).join("");
+      c+='<button class="btn2" id="bloadaudit" style="margin-top:12px;font-size:12px">Refresh</button>';
     }
   }
   else if(S.adminTab==="pins"){const labels={A_M:"A Male",A_F:"A Female",B_M:"B Male",B_F:"B Female",C_M:"C Male",C_F:"C Female",D_M:"D Male",D_F:"D Female",E_M:"E Male",E_F:"E Female",ADMIN:"Admin"};c='<div style="background:var(--rbg);border:1px solid var(--rbd);border-radius:var(--radius-xs);padding:12px;margin-bottom:14px;font-size:11px;color:var(--r);font-weight:600;display:flex;gap:8px;letter-spacing:.2px">'+I.lock+' Keep PINs secret</div>'+Object.entries(labels).map(([uid,l])=>'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);"><div style="flex:1;font-weight:700;font-size:13px">'+l+'</div><input class="fi" id="p-'+uid+'" placeholder="'+(S.pinStatus[uid]?"\u2022\u2022\u2022\u2022":"New")+'" maxlength="6" type="password" style="width:70px;text-align:center;font-size:16px;font-weight:900;letter-spacing:3px;padding:8px" autocomplete="off"><button class="btn" style="width:auto;padding:8px 12px" data-sp="'+uid+'">'+I.save+'</button></div>').join("")+'<div style="margin-top:20px;padding-top:16px;border-top:1.5px solid var(--border)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Data Tools</div><button class="btn2" id="bmigrate" style="font-size:12px;padding:10px">Migrate Ward/Room Data</button></div>';}
@@ -772,6 +795,13 @@ function bindAll(){
   const osa=$("osa");if(osa)osa.addEventListener("click",()=>{S.ocrSel=S.ocrSel.length===S.ocrResults.length?[]:S.ocrResults.map((_,i)=>i);render();});
   const oi=$("oi");if(oi)oi.addEventListener("click",importOCR);
   document.querySelectorAll("[data-sp]").forEach(b=>b.addEventListener("click",async()=>{const uid=b.dataset.sp,v=$("p-"+uid);const pv=v?v.value.trim():"";if(!pv||pv.length<4){toast("Min 4 digits","err");return;}if(!S.adminPin){toast("Admin session invalid","err");return;}try{await fnSetPin({adminPin:S.adminPin,unit:uid,newPin:pv});S.pinStatus[uid]=true;toast("Saved");}catch(e){toast(e.message||"Failed","err");}}));
+  const baudit=$("bloadaudit");if(baudit)baudit.addEventListener("click",async()=>{
+    if(!S.adminPin){toast("Admin session invalid","err");return;}
+    S._auditLoading=true;S._auditLog=[];render();
+    try{const res=await fnGetAuditLog({adminPin:S.adminPin,limit:200});S._auditLog=res.data.entries||[];}
+    catch(e){toast("Failed: "+(e.message||"error"),"err");S._auditLog=null;}
+    S._auditLoading=false;render();
+  });
   const bmig=$("bmigrate");if(bmig)bmig.addEventListener("click",async()=>{bmig.disabled=true;bmig.textContent="Migrating...";try{await migrateWardRoom();}catch(e){toast("Migration error: "+e.message,"err");}bmig.disabled=false;bmig.textContent="Migrate Ward/Room Data";});
 }
 

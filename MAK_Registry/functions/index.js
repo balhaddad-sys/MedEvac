@@ -71,9 +71,10 @@ exports.verifyPin = functions.region("europe-west1").https.onCall(async (data, c
     throw new functions.https.HttpsError("invalid-argument", "Invalid PIN");
   }
 
-  // Rate limit by IP
-  const ip = context.rawRequest?.ip || context.auth.uid || "unknown";
-  if (!checkRateLimit(ip)) {
+  // Rate limit by both IP and UID — prevents bypass via new anonymous accounts
+  const ip = context.rawRequest?.ip || "unknown";
+  const uid = context.auth.uid || "unknown";
+  if (!checkRateLimit(ip) || !checkRateLimit("uid:" + uid)) {
     throw new functions.https.HttpsError("resource-exhausted", "Too many attempts. Try again later.");
   }
 
@@ -87,21 +88,23 @@ exports.verifyPin = functions.region("europe-west1").https.onCall(async (data, c
   const match = verifyPin(pin, stored);
   if (!match) {
     recordFail(ip);
+    recordFail("uid:" + uid);
     await db.ref("audit").push({
       action: "login_fail",
       unit,
       ts: Date.now(),
-      uid: context.auth.uid || "anon",
+      uid: uid,
     });
     throw new functions.https.HttpsError("permission-denied", "Wrong PIN");
   }
 
   resetFails(ip);
+  resetFails("uid:" + uid);
   await db.ref("audit").push({
     action: "login",
     unit,
     ts: Date.now(),
-    uid: context.auth.uid || "anon",
+    uid: uid,
   });
 
   return { success: true, unit };
@@ -161,6 +164,35 @@ exports.hasPins = functions.region("europe-west1").https.onCall(async (data, con
     result[key] = true;
   }
   return result;
+});
+
+// Audit log: read recent audit entries (admin only — verifies ADMIN PIN)
+exports.getAuditLog = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Must be authenticated");
+  }
+
+  const { adminPin, limit: reqLimit } = data;
+  if (!adminPin || typeof adminPin !== "string") {
+    throw new functions.https.HttpsError("invalid-argument", "Admin PIN required");
+  }
+
+  // Verify admin PIN
+  const adminSnap = await db.ref("pins/ADMIN").once("value");
+  const adminStored = adminSnap.val();
+  if (!adminStored || !verifyPin(adminPin, adminStored)) {
+    throw new functions.https.HttpsError("permission-denied", "Invalid admin PIN");
+  }
+
+  const entryLimit = Math.min(Math.max(parseInt(reqLimit) || 100, 10), 500);
+  const snap = await db.ref("audit").orderByChild("ts").limitToLast(entryLimit).once("value");
+  const entries = [];
+  snap.forEach(child => {
+    entries.push({ _k: child.key, ...child.val() });
+  });
+  // Sort newest first
+  entries.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  return { entries };
 });
 
 // OCR: extract patient data from images via Claude API (key stays server-side)
