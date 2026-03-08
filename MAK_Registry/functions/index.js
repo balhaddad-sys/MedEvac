@@ -162,3 +162,122 @@ exports.hasPins = functions.region("europe-west1").https.onCall(async (data, con
   }
   return result;
 });
+
+// OCR: extract patient data from images via Claude API (key stays server-side)
+const ocrRateMap = new Map();
+const OCR_LIMIT = 10; // max 10 OCR calls per minute per user
+const OCR_WINDOW = 60000;
+
+exports.ocrExtract = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Must be authenticated");
+  }
+
+  // Rate limit per user
+  const uid = context.auth.uid;
+  const now = Date.now();
+  const entry = ocrRateMap.get(uid) || { count: 0, windowStart: now };
+  if (now - entry.windowStart > OCR_WINDOW) {
+    entry.count = 0;
+    entry.windowStart = now;
+  }
+  entry.count++;
+  ocrRateMap.set(uid, entry);
+  if (entry.count > OCR_LIMIT) {
+    throw new functions.https.HttpsError("resource-exhausted", "Too many OCR requests. Wait a minute.");
+  }
+
+  // Validate input
+  const { images } = data;
+  if (!images || !Array.isArray(images) || images.length === 0 || images.length > 5) {
+    throw new functions.https.HttpsError("invalid-argument", "Provide 1-5 images");
+  }
+  for (const img of images) {
+    if (!img.data || !img.mime || typeof img.data !== "string" || typeof img.mime !== "string") {
+      throw new functions.https.HttpsError("invalid-argument", "Invalid image format");
+    }
+    if (!img.mime.startsWith("image/")) {
+      throw new functions.https.HttpsError("invalid-argument", "Only image files allowed");
+    }
+    // Limit base64 size (~10MB per image)
+    if (img.data.length > 14000000) {
+      throw new functions.https.HttpsError("invalid-argument", "Image too large (max 10MB)");
+    }
+  }
+
+  // Get API key from database
+  const keySnap = await db.ref("config/claudeKey").once("value");
+  const apiKey = keySnap.val();
+  if (!apiKey) {
+    throw new functions.https.HttpsError("failed-precondition", "OCR not configured");
+  }
+
+  // Build Claude API request
+  const content = [];
+  for (const img of images) {
+    content.push({ type: "image", source: { type: "base64", media_type: img.mime, data: img.data } });
+  }
+  content.push({ type: "text", text: 'Extract ALL patient information from these images. Output ONLY valid JSON — no explanations, no markdown, no text before or after. Format: [{"name":"Full Name","civil":"Civil ID","nat":"Nationality","ward":"Ward (e.g. W21)","room":"Room (e.g. R8)","code":1,"notes":""}]. code: 1=green, 2=yellow, 3=red, 4=critical. Unknown fields="". No patients=[].' });
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4096,
+        system: "You are a data extraction tool. You MUST respond with ONLY a JSON array. Never include any text, explanation, or markdown — just raw JSON. If you cannot find patient data, respond with [].",
+        messages: [
+          { role: "user", content },
+          { role: "assistant", content: [{ type: "text", text: "[" }] },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Claude API error:", res.status, errText);
+      throw new functions.https.HttpsError("internal", "OCR service error");
+    }
+
+    const result = await res.json();
+    const raw = "[" + (result.content?.[0]?.text || "]");
+    const cleaned = raw.replace(/```json|```/g, "").trim();
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      return { patients: [] };
+    }
+
+    const patients = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(patients)) return { patients: [] };
+
+    // Sanitize output
+    const safe = patients.map(p => ({
+      name: String(p.name || "").slice(0, 200),
+      civil: String(p.civil || "").slice(0, 20),
+      nat: String(p.nat || "").slice(0, 50),
+      ward: String(p.ward || "").slice(0, 30),
+      room: String(p.room || "").slice(0, 30),
+      code: Math.max(1, Math.min(4, parseInt(p.code) || 2)),
+      notes: String(p.notes || "").slice(0, 500),
+    }));
+
+    await db.ref("audit").push({
+      action: "ocr_extract",
+      unit: "ADMIN",
+      ts: Date.now(),
+      uid: context.auth.uid,
+      count: safe.length,
+    });
+
+    return { patients: safe };
+  } catch (e) {
+    if (e instanceof functions.https.HttpsError) throw e;
+    console.error("OCR error:", e);
+    throw new functions.https.HttpsError("internal", "OCR processing failed");
+  }
+});
