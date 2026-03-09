@@ -295,8 +295,9 @@ function exportFullList(filterUnit,filterGender){
   const fs=14,pad=10,rh=fs+pad*2,hh=rh+8;
   const cols=["#","Name","Civil ID","Unit","Room","Code"],cw=[35,220,140,80,80,45];
   const tw=cw.reduce((a,b)=>a+b)+50;
+  const _nc=c=>{const n=+c;return n>=3?3:n;};
   const clr={1:"#059669",2:"#d97706",3:"#dc2626"};
-  const clrBg={1:"#ecfdf5",2:"#fffbeb",3:"#fef2f2"};
+  const clrBg={1:"#a7f3d0",2:"#fde68a",3:"#fecaca"};
   const MAX_PAGE_H=1400;
   const dateStr=new Date().toLocaleString("en",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
 
@@ -308,7 +309,7 @@ function exportFullList(filterUnit,filterGender){
     items.push({type:"colHdr",h:hh});
     pts.forEach((p,ri)=>{
       const unitLabel=p._unit+" "+(p._gender==="F"?"\u2640":"\u2642");
-      items.push({type:"row",cells:[""+(ri+1),p.name||"",p.civil||"",unitLabel,p.room||"-",""+p.code],ri,h:rh});
+      items.push({type:"row",cells:[""+(ri+1),p.name||"",p.civil||"",unitLabel,p.room||"-",""+_nc(p.code)],ri,h:rh});
     });
     items.push({type:"gap",h:14});
   });
@@ -530,8 +531,9 @@ function backupPNG(){
   const cols=["#","Name","Civil ID","Nat","Room","Code","Notes"],cw=[32,150,110,60,50,55,130];
   const fs=13,pad=9,rh=fs+pad*2,hh=rh+4,whh=30;
   const tw=cw.reduce((a,b)=>a+b)+24;
+  const _nc=c=>{const n=+c;return n>=3?3:n;};
   const clr={1:"#059669",2:"#d97706",3:"#dc2626"};
-  const clrBg={1:"#ecfdf5",2:"#fffbeb",3:"#fef2f2"};
+  const clrBg={1:"#a7f3d0",2:"#fde68a",3:"#fecaca"};
   const codeLbl={1:"Green",2:"Yellow",3:"Critical"};
   // Calculate total height
   let totalH=60;
@@ -567,14 +569,15 @@ function backupPNG(){
     y+=hh;
     // Patient rows
     wPts.forEach((p,ri)=>{
-      const row=[""+(ri+1),p.name||"",p.civil||"",p.nat||"",p.room||"-",""+p.code,p.notes||""];
+      const nc=_nc(p.code);
+      const row=[""+(ri+1),p.name||"",p.civil||"",p.nat||"",p.room||"-",""+nc,p.notes||""];
       ctx.fillStyle=ri%2?"#f8fafc":"#ffffff";ctx.fillRect(12,y,tw-24,rh);
       ctx.fillStyle="#e2e8f0";ctx.fillRect(12,y+rh-0.5,tw-24,0.5);
       ctx.font=fs+"px Inter,sans-serif";x=tw-14;
       row.forEach((cell,ci)=>{
         if(ci===5){
           // Code column: color-filled cell
-          const codeNum=+cell;
+          const codeNum=nc;
           const cx=x-cw[ci]+2,cw5=cw[ci]-4,cy2=y+2,ch=rh-4;
           ctx.fillStyle=clrBg[codeNum]||"#f8fafc";ctx.fillRect(cx,cy2,cw5,ch);
           ctx.fillStyle=clr[codeNum]||"#334155";
