@@ -12,7 +12,7 @@
           "civil": { ".validate": "newData.isString() && newData.val().length <= 20" },
           "nat": { ".validate": "newData.isString() && newData.val().length <= 50" },
           "ward": { ".validate": "newData.isString() && newData.val().length <= 30" },
-          "code": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4" },
+          "code": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3" },
           "room": { ".validate": "newData.isString() && newData.val().length <= 30" },
           "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
           "ts": { ".validate": "newData.isNumber()" },
