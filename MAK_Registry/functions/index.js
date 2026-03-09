@@ -249,7 +249,7 @@ exports.ocrExtract = functions.region("europe-west1").https.onCall(async (data, 
   for (const img of images) {
     content.push({ type: "image", source: { type: "base64", media_type: img.mime, data: img.data } });
   }
-  content.push({ type: "text", text: 'Extract ALL patient information from these images. Output ONLY valid JSON — no explanations, no markdown, no text before or after. Format: [{"name":"Full Name","civil":"Civil ID","nat":"Nationality","ward":"Ward (e.g. W21)","room":"Room (e.g. R8)","code":1,"notes":""}]. code: 1=green, 2=yellow, 3=red, 4=critical. Unknown fields="". No patients=[].' });
+  content.push({ type: "text", text: 'Extract ALL patient information from these images. Output ONLY valid JSON — no explanations, no markdown, no text before or after. Format: [{"name":"Full Name","civil":"Civil ID","nat":"Nationality","ward":"Ward (e.g. W21)","room":"Room (e.g. R8)","code":1,"notes":""}]. code: 1=green, 2=yellow, 3=critical/red. Unknown fields="". No patients=[].' });
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {

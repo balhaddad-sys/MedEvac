@@ -151,8 +151,8 @@ dl:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentC
 chk:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
 };
 
-const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"},4:{label:"Critical",cls:"critical"}};
-const cc=c=>CC[c]||CC[4];
+const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Critical",cls:"critical"}};
+const cc=c=>CC[c]||CC[3];
 const _testIOS=window.location.search.includes("testios");
 const _isIOS=_testIOS||/iphone|ipad|ipod/i.test(navigator.userAgent);
 const _isStandalone=!_testIOS&&(window.navigator.standalone||window.matchMedia("(display-mode:standalone)").matches);
@@ -295,7 +295,8 @@ function exportFullList(filterUnit,filterGender){
   const fs=14,pad=10,rh=fs+pad*2,hh=rh+8;
   const cols=["#","Name","Civil ID","Unit","Room","Code"],cw=[35,220,140,80,80,45];
   const tw=cw.reduce((a,b)=>a+b)+50;
-  const clr={1:"#059669",2:"#d97706",3:"#dc2626",4:"#dc2626"};
+  const clr={1:"#059669",2:"#d97706",3:"#dc2626"};
+  const clrBg={1:"#ecfdf5",2:"#fffbeb",3:"#fef2f2"};
   const MAX_PAGE_H=1400;
   const dateStr=new Date().toLocaleString("en",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
 
@@ -336,7 +337,7 @@ function exportFullList(filterUnit,filterGender){
 
   const rr=function(ctx2,x2,y2,w2,h2,r){ctx2.beginPath();ctx2.moveTo(x2+r,y2);ctx2.lineTo(x2+w2-r,y2);ctx2.quadraticCurveTo(x2+w2,y2,x2+w2,y2+r);ctx2.lineTo(x2+w2,y2+h2-r);ctx2.quadraticCurveTo(x2+w2,y2+h2,x2+w2-r,y2+h2);ctx2.lineTo(x2+r,y2+h2);ctx2.quadraticCurveTo(x2,y2+h2,x2,y2+h2-r);ctx2.lineTo(x2,y2+r);ctx2.quadraticCurveTo(x2,y2,x2+r,y2);ctx2.closePath();ctx2.fill();};
 
-  const codeLbl={1:"Green",2:"Yellow",3:"Red",4:"Critical"};
+  const codeLbl={1:"Green",2:"Yellow",3:"Critical"};
 
   function renderPage(pgItems,pgNum,totalPages){
     const cv=document.createElement("canvas"),ctx=cv.getContext("2d");
@@ -383,7 +384,9 @@ function exportFullList(filterUnit,filterGender){
         // Draw each cell
         item.cells.forEach((cell,ci)=>{
           if(ci===5){
-            // Code column: colored label
+            // Code column: color-filled cell
+            const cx=x-cw[ci]+2,cw5=cw[ci]-4,cy=y+2,ch=rh-4;
+            ctx.fillStyle=clrBg[codeNum]||"#f8fafc";ctx.fillRect(cx,cy,cw5,ch);
             ctx.fillStyle=clr[codeNum]||"#334155";
             ctx.font="bold "+fs+"px Inter,sans-serif";
             ctx.fillText(codeLbl[codeNum]||cell,x-6,y+rh/2);
@@ -517,37 +520,77 @@ function exportFullList(filterUnit,filterGender){
 }
 
 function backupPNG(){
-  if(!S.unit||!S.patients.length)return;const pts=[...S.patients].sort((a,b)=>b.code-a.code);
-  const cols=["#","Name","Civil ID","Nat","Ward","Room","Code","Notes"],cw=[32,150,110,60,55,50,40,130];
-  const rows=pts.map((p,i)=>[""+(i+1),p.name||"",p.civil||"",p.nat||"",p.ward||"",p.room||"-",""+p.code,p.notes||""]);
-  const cv=document.createElement("canvas"),ctx=cv.getContext("2d"),fs=13,pad=9,rh=fs+pad*2,hh=rh+4;
-  const tw=cw.reduce((a,b)=>a+b)+24,th=60+hh+rows.length*rh+20;
-  cv.width=tw;cv.height=th;
+  if(!S.unit||!S.patients.length)return;
+  const pts=[...S.patients];
+  // Group by ward
+  const wardMap={};
+  pts.forEach(p=>{const w=_wardLabel(p);if(!wardMap[w])wardMap[w]=[];wardMap[w].push(p);});
+  const wardKeys=Object.keys(wardMap).sort();
+
+  const cols=["#","Name","Civil ID","Nat","Room","Code","Notes"],cw=[32,150,110,60,50,55,130];
+  const fs=13,pad=9,rh=fs+pad*2,hh=rh+4,whh=30;
+  const tw=cw.reduce((a,b)=>a+b)+24;
+  const clr={1:"#059669",2:"#d97706",3:"#dc2626"};
+  const clrBg={1:"#ecfdf5",2:"#fffbeb",3:"#fef2f2"};
+  const codeLbl={1:"Green",2:"Yellow",3:"Critical"};
+  // Calculate total height
+  let totalH=60;
+  wardKeys.forEach(w=>{totalH+=whh+hh+wardMap[w].length*rh+10;});
+  totalH+=20;
+
+  const cv=document.createElement("canvas"),ctx=cv.getContext("2d");
+  cv.width=tw;cv.height=totalH;
   // White bg + blue banner
-  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,tw,th);
+  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,tw,totalH);
   ctx.fillStyle="#1e3a5f";ctx.fillRect(0,0,tw,54);
   ctx.textAlign="right";ctx.textBaseline="middle";
   ctx.fillStyle="#ffffff";ctx.font="bold 16px Inter,sans-serif";
-  ctx.fillText("Unit "+S.unit[0]+" — "+(S.unit.endsWith("_F")?"Female":"Male"),tw-14,20);
+  ctx.fillText("Unit "+S.unit[0]+" \u2014 "+(S.unit.endsWith("_F")?"Female":"Male"),tw-14,20);
   ctx.fillStyle="rgba(255,255,255,.5)";ctx.font="11px Inter,sans-serif";
-  ctx.fillText(new Date().toLocaleString("en",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}),tw-14,38);
+  ctx.fillText(new Date().toLocaleString("en",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})+"  |  "+pts.length+" patients",tw-14,38);
   let y=60;
-  // Column headers
-  ctx.fillStyle="#f0f4f8";ctx.fillRect(12,y,tw-24,hh);
-  ctx.fillStyle="#1e3a5f";ctx.font="bold "+fs+"px Inter,sans-serif";let x=tw-14;
-  cols.forEach((c,i)=>{ctx.fillText(c,x-4,y+hh/2);x-=cw[i];});y+=hh;
-  const clr={1:"#059669",2:"#d97706",3:"#dc2626",4:"#dc2626"};
-  rows.forEach((row,ri)=>{
-    ctx.fillStyle=ri%2?"#f8fafc":"#ffffff";ctx.fillRect(12,y,tw-24,rh);
-    ctx.fillStyle="#e2e8f0";ctx.fillRect(12,y+rh-0.5,tw-24,0.5);
-    ctx.font=fs+"px Inter,sans-serif";x=tw-14;
-    row.forEach((cell,ci)=>{
-      ctx.fillStyle=ci===6?clr[+cell]||"#334155":"#334155";
-      if(ci===6)ctx.font="bold "+fs+"px Inter,sans-serif";else ctx.font=fs+"px Inter,sans-serif";
-      let t=cell;const mw=cw[ci]-8;
-      if(ctx.measureText(t).width>mw){while(ctx.measureText(t+"\u2026").width>mw&&t.length>1)t=t.slice(0,-1);t+="\u2026";}
-      ctx.fillText(t,x-4,y+rh/2);x-=cw[ci];
-    });y+=rh;
+
+  wardKeys.forEach(w=>{
+    const wPts=wardMap[w].sort((a,b)=>(b.code||0)-(a.code||0));
+    // Ward header
+    ctx.fillStyle="#1e40af";
+    ctx.beginPath();ctx.moveTo(12+6,y);ctx.lineTo(tw-12-6,y);ctx.quadraticCurveTo(tw-12,y,tw-12,y+6);ctx.lineTo(tw-12,y+whh-6);ctx.quadraticCurveTo(tw-12,y+whh,tw-12-6,y+whh);ctx.lineTo(12+6,y+whh);ctx.quadraticCurveTo(12,y+whh,12,y+whh-6);ctx.lineTo(12,y+6);ctx.quadraticCurveTo(12,y,12+6,y);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#ffffff";ctx.font="bold 13px Inter,sans-serif";
+    ctx.fillText("Ward "+w+"   \u2014   "+wPts.length+" patient"+(wPts.length!==1?"s":""),tw-20,y+whh/2);
+    y+=whh;
+    // Column headers
+    ctx.fillStyle="#f0f4f8";ctx.fillRect(12,y,tw-24,hh);
+    ctx.fillStyle="#c7d2e0";ctx.fillRect(12,y+hh-1,tw-24,1);
+    ctx.fillStyle="#1e3a5f";ctx.font="bold "+fs+"px Inter,sans-serif";
+    let x=tw-14;
+    cols.forEach((c,i)=>{ctx.fillText(c,x-4,y+hh/2);x-=cw[i];});
+    y+=hh;
+    // Patient rows
+    wPts.forEach((p,ri)=>{
+      const row=[""+(ri+1),p.name||"",p.civil||"",p.nat||"",p.room||"-",""+p.code,p.notes||""];
+      ctx.fillStyle=ri%2?"#f8fafc":"#ffffff";ctx.fillRect(12,y,tw-24,rh);
+      ctx.fillStyle="#e2e8f0";ctx.fillRect(12,y+rh-0.5,tw-24,0.5);
+      ctx.font=fs+"px Inter,sans-serif";x=tw-14;
+      row.forEach((cell,ci)=>{
+        if(ci===5){
+          // Code column: color-filled cell
+          const codeNum=+cell;
+          const cx=x-cw[ci]+2,cw5=cw[ci]-4,cy2=y+2,ch=rh-4;
+          ctx.fillStyle=clrBg[codeNum]||"#f8fafc";ctx.fillRect(cx,cy2,cw5,ch);
+          ctx.fillStyle=clr[codeNum]||"#334155";
+          ctx.font="bold "+fs+"px Inter,sans-serif";
+          ctx.fillText(codeLbl[codeNum]||cell,x-4,y+rh/2);
+        }else{
+          ctx.fillStyle=ci===0?"#94a3b8":"#334155";
+          ctx.font=fs+"px Inter,sans-serif";
+          let t=cell;const mw=cw[ci]-8;
+          if(ctx.measureText(t).width>mw){while(ctx.measureText(t+"\u2026").width>mw&&t.length>1)t=t.slice(0,-1);t+="\u2026";}
+          ctx.fillText(t,x-4,y+rh/2);
+        }
+        x-=cw[ci];
+      });y+=rh;
+    });
+    y+=10;
   });
   const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="MedEvac_"+S.unit+".png";document.body.appendChild(a);a.click();document.body.removeChild(a);audit("backup_export",S.unit,S.patients.length+" patients");toast("Backup saved");
 }
@@ -653,11 +696,11 @@ function vWard(){
 
 function vDetail(){
   const p=S.editP,cv=S.showCivil[p._k]?p.civil:mask(p.civil);
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="margin:0 8px"><h1 style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</h1><p>Details</p></div></div><div class="sp" style="padding:14px 16px 100px"><div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0 16px;margin-bottom:18px;box-shadow:var(--shadow)"><div class="ir"><span style="color:var(--muted);font-weight:600">Civil ID</span><span style="font-weight:700;display:flex;align-items:center;gap:6px">'+esc(cv)+'<button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="tc">'+(S.showCivil[p._k]?I.eyeOff:I.eye)+'</button></span></div><div class="ir"><span style="color:var(--muted);font-weight:600">Nationality</span><span style="font-weight:700">'+esc(p.nat||"\u2014")+'</span></div></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="ew" placeholder="e.g. W21" value="'+esc(p.ward||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="erm" placeholder="e.g. R8" value="'+esc(p.room||"")+'"></div></div><div class="fg"><label class="fl">Severity Code</label><div class="cg2">'+[1,2,3,4].map(c=>'<div class="co'+(S.editCode==c?" s"+c:"")+'" data-cpick="e" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="en" placeholder="Notes..." value="'+esc(p.notes||"")+'"></div><div style="display:flex;gap:8px"><button class="btn" id="bs">'+I.save+' Save</button><button class="btnd" id="bd">'+I.trash+'</button></div></div></div>';
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="margin:0 8px"><h1 style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</h1><p>Details</p></div></div><div class="sp" style="padding:14px 16px 100px"><div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0 16px;margin-bottom:18px;box-shadow:var(--shadow)"><div class="ir"><span style="color:var(--muted);font-weight:600">Civil ID</span><span style="font-weight:700;display:flex;align-items:center;gap:6px">'+esc(cv)+'<button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="tc">'+(S.showCivil[p._k]?I.eyeOff:I.eye)+'</button></span></div><div class="ir"><span style="color:var(--muted);font-weight:600">Nationality</span><span style="font-weight:700">'+esc(p.nat||"\u2014")+'</span></div></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="ew" placeholder="e.g. W21" value="'+esc(p.ward||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="erm" placeholder="e.g. R8" value="'+esc(p.room||"")+'"></div></div><div class="fg"><label class="fl">Severity Code</label><div class="cg2">'+[1,2,3].map(c=>'<div class="co'+(S.editCode==c?" s"+c:"")+'" data-cpick="e" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="en" placeholder="Notes..." value="'+esc(p.notes||"")+'"></div><div style="display:flex;gap:8px"><button class="btn" id="bs">'+I.save+' Save</button><button class="btnd" id="bd">'+I.trash+'</button></div></div></div>';
 }
 
 function vAdd(){
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Add Patient</h1></div><div style="width:36px"></div></div><div class="sp" style="padding:14px 14px 100px"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="an" placeholder="Name" autocomplete="off" value="'+esc(S._addName||"")+'"></div><div class="fg"><label class="fl">Civil ID *</label><input class="fi" id="ac" placeholder="Civil ID" inputmode="numeric" autocomplete="off" value="'+esc(S._addCivil||"")+'"></div><div class="fg"><label class="fl">Nationality</label><input class="fi" id="at" placeholder="Nationality" autocomplete="off" value="'+esc(S._addNat||"")+'"></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="aw" placeholder="e.g. W21" autocomplete="off" value="'+esc(S._addWard||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="arm" placeholder="e.g. R8" autocomplete="off" value="'+esc(S._addRoom||"")+'"></div></div><div class="fg"><label class="fl">Severity Code *</label><div class="cg2">'+[1,2,3,4].map(c=>'<div class="co'+(S.addCode==c?" s"+c:"")+'" data-cpick="a" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="ao" placeholder="Notes..." autocomplete="off" value="'+esc(S._addNotes||"")+'"></div><button class="btn" id="bsa">'+I.plus+' Add Patient</button></div></div>';
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Add Patient</h1></div><div style="width:36px"></div></div><div class="sp" style="padding:14px 14px 100px"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="an" placeholder="Name" autocomplete="off" value="'+esc(S._addName||"")+'"></div><div class="fg"><label class="fl">Civil ID *</label><input class="fi" id="ac" placeholder="Civil ID" inputmode="numeric" autocomplete="off" value="'+esc(S._addCivil||"")+'"></div><div class="fg"><label class="fl">Nationality</label><input class="fi" id="at" placeholder="Nationality" autocomplete="off" value="'+esc(S._addNat||"")+'"></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="aw" placeholder="e.g. W21" autocomplete="off" value="'+esc(S._addWard||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="arm" placeholder="e.g. R8" autocomplete="off" value="'+esc(S._addRoom||"")+'"></div></div><div class="fg"><label class="fl">Severity Code *</label><div class="cg2">'+[1,2,3].map(c=>'<div class="co'+(S.addCode==c?" s"+c:"")+'" data-cpick="a" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="ao" placeholder="Notes..." autocomplete="off" value="'+esc(S._addNotes||"")+'"></div><button class="btn" id="bsa">'+I.plus+' Add Patient</button></div></div>';
 }
 
 function vAdmin(){
@@ -713,7 +756,7 @@ function vAdmin(){
           +'<div class="ocr-row2"><div class="ocr-field'+(missingWard?" ocr-miss":"")+'"><label>Ward *</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="ward" value="'+esc(p.ward||"")+'"></div>'
           +'<div class="ocr-field"><label>Room</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="room" value="'+esc(p.room||"")+'"></div></div>'
           +'<div class="ocr-row2"><div class="ocr-field"><label>Nationality</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="nat" value="'+esc(p.nat||"")+'"></div>'
-          +'<div class="ocr-field"><label>Code</label><select class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="code"><option value="1"'+(p.code==1?' selected':'')+'>1 Green</option><option value="2"'+(p.code==2||!p.code?' selected':'')+'>2 Yellow</option><option value="3"'+(p.code==3?' selected':'')+'>3 Red</option><option value="4"'+(p.code==4?' selected':'')+'>4 Critical</option></select></div></div>'
+          +'<div class="ocr-field"><label>Code</label><select class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="code"><option value="1"'+(p.code==1?' selected':'')+'>1 Green</option><option value="2"'+(p.code==2||!p.code?' selected':'')+'>2 Yellow</option><option value="3"'+(p.code>=3?' selected':'')+'>3 Critical</option></select></div></div>'
           +'<div class="ocr-field"><label>Notes</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="notes" value="'+esc(p.notes||"")+'"></div>'
           +'</div></div>';
       });
