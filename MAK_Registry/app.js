@@ -241,9 +241,47 @@ window.addEventListener("focus",()=>_pb.classList.remove("show"));
 document.addEventListener("contextmenu",e=>{if(S.screen!=="home")e.preventDefault();});
 window.addEventListener("beforeunload",()=>{S.patients=[];S.allData={};S.editP=null;});
 
-function exportFullList(){
+function showExportDialog(){
+  const cnt={};["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{cnt[u+"_"+g]=Object.keys(S.allData[u+"_"+g]||{}).length;}));
+  const total=Object.values(cnt).reduce((a,b)=>a+b,0);
+  if(!total){toast("No patients","err");return;}
+  const r=$("cr");
+  let html='<div class="c-overlay"><div class="modal" style="max-width:340px;text-align:right;padding:24px 20px">';
+  html+='<div style="font-size:15px;font-weight:800;margin-bottom:4px;text-align:center">Export PDF</div>';
+  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:16px;text-align:center">Choose scope</div>';
+  // All units option
+  html+='<button class="btn" id="exp-all" style="margin-bottom:10px;font-size:13px;padding:12px">'+I.dl+' All Units ('+total+')</button>';
+  // Per-unit options
+  html+='<div style="display:flex;flex-direction:column;gap:6px">';
+  ["A","B","C","D","E"].forEach(u=>{
+    const mc=cnt[u+"_M"],fc=cnt[u+"_F"],uc=mc+fc;
+    if(!uc)return;
+    html+='<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-xs);padding:10px 12px">';
+    html+='<div style="font-size:12px;font-weight:800;color:var(--pri);margin-bottom:8px">Unit '+u+' <span style="font-size:10px;color:var(--muted);font-weight:600">('+uc+')</span></div>';
+    html+='<div style="display:flex;gap:6px">';
+    if(mc)html+='<button class="btn2 exp-unit" data-eu="'+u+'" data-eg="M" style="flex:1;font-size:11px;padding:8px;gap:4px"><span style="color:#2563eb">\u2642</span> Male ('+mc+')</button>';
+    if(fc)html+='<button class="btn2 exp-unit" data-eu="'+u+'" data-eg="F" style="flex:1;font-size:11px;padding:8px;gap:4px"><span style="color:#d946ef">\u2640</span> Female ('+fc+')</button>';
+    if(mc&&fc)html+='<button class="btn2 exp-unit" data-eu="'+u+'" data-eg="MF" style="flex:1;font-size:11px;padding:8px">Both ('+uc+')</button>';
+    html+='</div></div>';
+  });
+  html+='</div>';
+  html+='<button class="btn2" id="exp-cancel" style="margin-top:12px;font-size:12px;padding:10px">Cancel</button>';
+  html+='</div></div>';
+  r.innerHTML=html;
+  $("exp-all").addEventListener("click",()=>{r.innerHTML="";exportFullList();});
+  $("exp-cancel").addEventListener("click",()=>{r.innerHTML="";});
+  document.querySelectorAll(".exp-unit").forEach(b=>b.addEventListener("click",()=>{
+    const unit=b.dataset.eu,gender=b.dataset.eg;
+    r.innerHTML="";
+    exportFullList(unit,gender);
+  }));
+}
+
+function exportFullList(filterUnit,filterGender){
   const allPats=[];
   ["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{
+    if(filterUnit&&u!==filterUnit)return;
+    if(filterGender&&filterGender!=="MF"&&g!==filterGender)return;
     const uid=u+"_"+g;
     Object.entries(S.allData[uid]||{}).forEach(([k,v])=>allPats.push({...v,_unit:u,_gender:g==="M"?"M":"F",_uid:uid}));
   }));
@@ -313,7 +351,8 @@ function exportFullList(){
     ctx.fillStyle="#1e3a5f";ctx.fillRect(0,0,tw,70);
     ctx.textAlign="right";ctx.textBaseline="middle";
     ctx.fillStyle="#ffffff";ctx.font="bold 20px Inter,sans-serif";
-    ctx.fillText("MedEvac — Patient Registry by Ward",tw-20,24);
+    const bannerTitle="MedEvac — Patient Registry by Ward"+(filterUnit?" (Unit "+filterUnit+(filterGender&&filterGender!=="MF"?" "+(filterGender==="M"?"\u2642":"\u2640"):"")+")" :"");
+    ctx.fillText(bannerTitle,tw-20,24);
     ctx.fillStyle="rgba(255,255,255,.6)";ctx.font="13px Inter,sans-serif";
     ctx.fillText("Mubarak Al-Kabeer Hospital  |  "+dateStr,tw-20,48);
     ctx.fillStyle="rgba(255,255,255,.35)";ctx.font="11px Inter,sans-serif";
@@ -468,10 +507,12 @@ function exportFullList(){
   const blob=new Blob([pdfBytes],{type:"application/pdf"});
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");a.href=url;
-  a.download="MedEvac_ByWard_"+new Date().toISOString().slice(0,10)+".pdf";
+  const suffix=filterUnit?(filterGender&&filterGender!=="MF"?"_Unit"+filterUnit+"_"+(filterGender==="M"?"Male":"Female"):"_Unit"+filterUnit):"";
+  a.download="MedEvac_ByWard"+suffix+"_"+new Date().toISOString().slice(0,10)+".pdf";
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),5000);
-  audit("full_export","ALL",allPats.length+" patients");
+  const scope=filterUnit?"Unit "+filterUnit+(filterGender&&filterGender!=="MF"?" "+(filterGender==="M"?"Male":"Female"):""):"ALL";
+  audit("full_export",scope,allPats.length+" patients");
   toast("PDF exported — "+pages.length+" page"+(pages.length>1?"s":""));
 }
 
@@ -732,7 +773,7 @@ function updatePinDisplay(){
 
 function bindAll(){
   document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S._pinNeedsLayout=true;S.screen="pin";render();}));
-  const bfl=$("bfl");if(bfl)bfl.addEventListener("click",()=>exportFullList());
+  const bfl=$("bfl");if(bfl)bfl.addEventListener("click",()=>showExportDialog());
   const bwv=$("bwv");if(bwv)bwv.addEventListener("click",()=>{S.wardSearch="";S.wardSelected=null;S.screen="wardview";render();});
   const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S._pinNeedsLayout=true;S.screen="pin";render();});
   const bb=$("bb");if(bb)bb.addEventListener("click",()=>{if(S.screen==="ward"||S.screen==="admin"){S.screen="home";S.showCivil={};S._fromAdmin=false;render();}else if(S.screen==="wardview"){S.screen="home";render();}else if(S.screen==="detail"||S.screen==="add"){if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";render();}else if(S._fromWardView){S._fromWardView=false;S.screen="wardview";render();}else{S.screen="ward";render();}}else if(S.screen==="pin"){S.screen="home";render();}});
