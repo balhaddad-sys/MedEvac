@@ -67,7 +67,7 @@ exports.verifyPin = functions.region("europe-west1").https.onCall(async (data, c
   if (!unit || !validUnits.test(unit)) {
     throw new functions.https.HttpsError("invalid-argument", "Invalid unit");
   }
-  if (!pin || typeof pin !== "string" || pin.length < 4 || pin.length > 6) {
+  if (!pin || typeof pin !== "string" || pin.length !== 4) {
     throw new functions.https.HttpsError("invalid-argument", "Invalid PIN");
   }
 
@@ -121,8 +121,8 @@ exports.setPin = functions.region("europe-west1").https.onCall(async (data, cont
   if (!unit || !validUnits.test(unit)) {
     throw new functions.https.HttpsError("invalid-argument", "Invalid unit");
   }
-  if (!newPin || typeof newPin !== "string" || newPin.length < 4 || newPin.length > 6) {
-    throw new functions.https.HttpsError("invalid-argument", "PIN must be 4-6 digits");
+  if (!newPin || typeof newPin !== "string" || newPin.length !== 4) {
+    throw new functions.https.HttpsError("invalid-argument", "PIN must be 4 digits");
   }
   if (!adminPin || typeof adminPin !== "string") {
     throw new functions.https.HttpsError("invalid-argument", "Admin PIN required");
@@ -313,3 +313,39 @@ exports.ocrExtract = functions.region("europe-west1").https.onCall(async (data, 
     throw new functions.https.HttpsError("internal", "OCR processing failed");
   }
 });
+
+// Scheduled daily backup: copies all patient data to backups/<date>
+exports.dailyBackup = functions.region("europe-west1").pubsub
+  .schedule("every 24 hours")
+  .timeZone("Asia/Kuwait")
+  .onRun(async () => {
+    const snap = await db.ref("patients").once("value");
+    const data = snap.val();
+    if (!data) {
+      console.log("No patient data to back up");
+      return null;
+    }
+    const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    await db.ref("backups/" + date).set({
+      ts: Date.now(),
+      patients: data,
+    });
+    // Keep only last 30 days of backups
+    const backupsSnap = await db.ref("backups").orderByKey().once("value");
+    const keys = [];
+    backupsSnap.forEach(child => { keys.push(child.key); });
+    if (keys.length > 30) {
+      const toDelete = keys.slice(0, keys.length - 30);
+      const updates = {};
+      toDelete.forEach(k => { updates[k] = null; });
+      await db.ref("backups").update(updates);
+    }
+    console.log("Backup completed:", date, "patients:", Object.keys(data).length, "units");
+    await db.ref("audit").push({
+      action: "auto_backup",
+      unit: "SYSTEM",
+      ts: Date.now(),
+      uid: "system",
+    });
+    return null;
+  });
