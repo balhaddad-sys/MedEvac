@@ -13,11 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -27,75 +22,17 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Initialize TWA project
+      - name: Configure Bubblewrap
         run: |
-          mkdir -p twa-build && cd twa-build
-          cat > twa-manifest.json << 'MANIFEST'
-          {
-            "packageId": "com.medevac.app",
-            "host": "${{ secrets.FIREBASE_HOSTING_URL }}",
-            "name": "MedEvac",
-            "launcherName": "MedEvac",
-            "display": "standalone",
-            "orientation": "portrait",
-            "themeColor": "#1d4ed8",
-            "navigationColor": "#1e40af",
-            "backgroundColor": "#f0f6ff",
-            "enableNotifications": false,
-            "startUrl": "/",
-            "iconUrl": "https://${{ secrets.FIREBASE_HOSTING_URL }}/icon-512.png",
-            "maskableIconUrl": "https://${{ secrets.FIREBASE_HOSTING_URL }}/icon-512.png",
-            "splashScreenFadeOutDuration": 300,
-            "signingKey": {
-              "path": "./keystore.jks",
-              "alias": "medevac"
-            },
-            "appVersionCode": ${{ github.run_number }},
-            "appVersion": "1.0.${{ github.run_number }}",
-            "shortcuts": [],
-            "generatorApp": "bubblewrap-cli",
-            "fallbackType": "customtabs",
-            "enableSiteSettingsShortcut": true,
-            "isChromeOSOnly": false,
-            "fingerprints": []
-          }
-          MANIFEST
-
-      - name: Generate signing keystore
-        run: |
-          cd twa-build
-          keytool -genkeypair \
-            -alias medevac \
-            -keyalg RSA -keysize 2048 \
-            -validity 10000 \
-            -keystore keystore.jks \
-            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
-
-      - name: Configure Bubblewrap JDK/SDK paths
-        run: |
-          mkdir -p "$HOME/.aspect/aspect-cli"
-          cat > "$HOME/.aspect/aspect-cli/config.json" << EOF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "$ANDROID_HOME"
-          }
-          EOF
-          mkdir -p "$HOME/.aspect/aspect-cli" 2>/dev/null || true
-          # Also set llama-pack config used by newer bubblewrap
-          mkdir -p "$HOME/.llama-pack" 2>/dev/null || true
-          cat > "$HOME/.llama-pack/llama-pack-config.json" << EOF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "$ANDROID_HOME"
-          }
-          EOF
-          # Bubblewrap config
-          mkdir -p "$HOME/.bubblewrap" 2>/dev/null || true
+          mkdir -p "$HOME/.bubblewrap"
           cat > "$HOME/.bubblewrap/config.json" << EOF
           {
             "jdkPath": "$JAVA_HOME",
@@ -103,26 +40,53 @@ jobs:
           }
           EOF
 
-      - name: Build TWA
+      - name: Generate signing keystore
+        run: |
+          mkdir -p twa-build
+          keytool -genkeypair \
+            -alias medevac \
+            -keyalg RSA -keysize 2048 \
+            -validity 10000 \
+            -keystore twa-build/keystore.jks \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
+
+      - name: Initialize and build TWA
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          HOSTING_URL: ${{ secrets.FIREBASE_HOSTING_URL }}
         run: |
           cd twa-build
-          echo "n" | bubblewrap build \
-            --manifest twa-manifest.json \
-            --skipPwaValidation \
-            --signingKeyPath ./keystore.jks \
-            --signingKeyAlias medevac \
-            --signingKeyPassword ${{ secrets.KEYSTORE_PASSWORD }} \
-            --signingStorePassword ${{ secrets.KEYSTORE_PASSWORD }}
+
+          # Use expect-like approach: pipe all answers to bubblewrap init
+          # Answers: n (no JDK install), then all defaults
+          printf 'n\n' | bubblewrap init \
+            --manifest "https://${HOSTING_URL}/manifest.json" \
+            --directory .
+
+          # Now build with Gradle directly — no interactive prompts
+          chmod +x ./gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="$(pwd)/keystore.jks" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias=medevac \
+            -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
+
+          # Find the output APK
+          find . -name "*.apk" -type f | head -5
+          cp app/build/outputs/apk/release/app-release.apk ../medevac-release.apk 2>/dev/null || \
+          cp $(find . -name "*release*.apk" -type f | head -1) ../medevac-release.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: medevac-apk
-          path: twa-build/app-release-signed.apk
+          path: medevac-release.apk
           retention-days: 30
 
       - name: Create Release (on tag)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: twa-build/app-release-signed.apk
+          files: medevac-release.apk
