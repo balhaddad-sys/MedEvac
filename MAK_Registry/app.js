@@ -151,8 +151,8 @@ dl:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentC
 chk:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
 };
 
-const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"},4:{label:"Critical",cls:"critical"}};
-const cc=c=>CC[c]||CC[4];
+const CC={1:{label:"Green",cls:"green"},2:{label:"Yellow",cls:"yellow"},3:{label:"Red",cls:"red"}};
+const cc=c=>CC[c]||CC[3];
 const _testIOS=window.location.search.includes("testios");
 const _isIOS=_testIOS||/iphone|ipad|ipod/i.test(navigator.userAgent);
 const _isStandalone=!_testIOS&&(window.navigator.standalone||window.matchMedia("(display-mode:standalone)").matches);
@@ -257,10 +257,10 @@ function exportFullList(showDoctors){
   const wardKeys=Object.keys(wardMap).sort();
 
   const fs=14,pad=10,rh=fs+pad*2,hh=rh+8;
-  const cols=showDoctors?["#","Name","Civil ID","Unit","Room","Code","Doctor"]:["#","Name","Civil ID","Unit","Room","Code"];
-  const cw=showDoctors?[30,180,120,65,65,45,140]:[35,220,140,80,80,45];
+  const cols=showDoctors?["#","Name","Civil ID","Unit","Room","Code","Doctor","Diagnosis"]:["#","Name","Civil ID","Unit","Room","Code"];
+  const cw=showDoctors?[30,190,120,55,55,60,120,120]:[35,210,130,75,75,60];
   const tw=cw.reduce((a,b)=>a+b)+50;
-  const clr={1:"#059669",2:"#d97706",3:"#dc2626",4:"#dc2626"};
+  const clr={1:"#059669",2:"#d97706",3:"#dc2626"};
   const MAX_PAGE_H=1400;
   const dateStr=new Date().toLocaleString("en",{year:"numeric",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
 
@@ -273,7 +273,7 @@ function exportFullList(showDoctors){
     pts.forEach((p,ri)=>{
       const unitLabel=p._unit+" "+(p._gender==="F"?"\u2640":"\u2642");
       const cells=[""+(ri+1),p.name||"",p.civil||"",unitLabel,p.room||"-",""+p.code];
-      if(showDoctors)cells.push(p.doctor||"-");
+      if(showDoctors){cells.push(p.doctor||"-");cells.push(p.diagnosis||"-");}
       items.push({type:"row",cells,ri,h:rh});
     });
     items.push({type:"gap",h:14});
@@ -303,7 +303,7 @@ function exportFullList(showDoctors){
 
   const rr=function(ctx2,x2,y2,w2,h2,r){ctx2.beginPath();ctx2.moveTo(x2+r,y2);ctx2.lineTo(x2+w2-r,y2);ctx2.quadraticCurveTo(x2+w2,y2,x2+w2,y2+r);ctx2.lineTo(x2+w2,y2+h2-r);ctx2.quadraticCurveTo(x2+w2,y2+h2,x2+w2-r,y2+h2);ctx2.lineTo(x2+r,y2+h2);ctx2.quadraticCurveTo(x2,y2+h2,x2,y2+h2-r);ctx2.lineTo(x2,y2+r);ctx2.quadraticCurveTo(x2,y2,x2+r,y2);ctx2.closePath();ctx2.fill();};
 
-  const codeLbl={1:"Green",2:"Yellow",3:"Red",4:"Critical"};
+  const codeLbl={1:"Green",2:"Yellow",3:"Red"};
 
   function renderPage(pgItems,pgNum,totalPages){
     const cv=document.createElement("canvas"),ctx=cv.getContext("2d");
@@ -349,10 +349,17 @@ function exportFullList(showDoctors){
         // Draw each cell
         item.cells.forEach((cell,ci)=>{
           if(ci===5){
-            // Code column: colored label
+            // Rounded pill badge for code
+            const lbl=codeLbl[codeNum]||cell;
+            ctx.font="bold "+(fs-1)+"px Inter,sans-serif";
+            const tw2=ctx.measureText(lbl).width;
+            const pw=tw2+14,ph=fs+4,pr=ph/2;
+            const px=x-cw[ci]/2-pw/2,py=y+rh/2-ph/2;
             ctx.fillStyle=clr[codeNum]||"#334155";
-            ctx.font="bold "+fs+"px Inter,sans-serif";
-            ctx.fillText(codeLbl[codeNum]||cell,x-6,y+rh/2);
+            ctx.beginPath();ctx.moveTo(px+pr,py);ctx.lineTo(px+pw-pr,py);ctx.quadraticCurveTo(px+pw,py,px+pw,py+pr);ctx.quadraticCurveTo(px+pw,py+ph,px+pw-pr,py+ph);ctx.lineTo(px+pr,py+ph);ctx.quadraticCurveTo(px,py+ph,px,py+pr);ctx.quadraticCurveTo(px,py,px+pr,py);ctx.closePath();ctx.fill();
+            ctx.fillStyle="#ffffff";ctx.textAlign="center";
+            ctx.fillText(lbl,px+pw/2,y+rh/2);
+            ctx.textAlign="right";
           }else if(ci===3){
             // Unit column: bold blue
             ctx.fillStyle="#1e40af";
@@ -482,11 +489,11 @@ function exportFullList(showDoctors){
 
 function backupPNG(showDoctors){
   if(!S.unit||!S.patients.length)return;
-  const cols=showDoctors?["#","Name","Civil ID","Nat","Room","Code","Doctor"]:["#","Name","Civil ID","Nat","Room","Code","Notes"];
-  const cw=showDoctors?[32,150,110,60,50,40,140]:[32,150,110,60,50,40,130];
+  const cols=showDoctors?["#","Name","Civil ID","Nat","Room","Code","Doctor","Diagnosis"]:["#","Name","Civil ID","Nat","Room","Code","Notes"];
+  const cw=showDoctors?[32,170,110,50,45,58,115,115]:[32,180,115,55,50,58,130];
   const fs=13,pad=9,rh=fs+pad*2,hh=rh+4,whh=30;
   const tw=cw.reduce((a,b)=>a+b)+24;
-  const clr={1:"#059669",2:"#d97706",3:"#dc2626",4:"#dc2626"};
+  const clr={1:"#059669",2:"#d97706",3:"#dc2626"};
 
   // Group by ward
   const wardMap={};
@@ -530,16 +537,33 @@ function backupPNG(showDoctors){
     // Rows
     pts.forEach((p,ri)=>{
       const row=[""+(ri+1),p.name||"",p.civil||"",p.nat||"",p.room||"-",""+p.code];
-      row.push(showDoctors?(p.doctor||"-"):(p.notes||""));
+      if(showDoctors){row.push(p.doctor||"-");row.push(p.diagnosis||"-");}else{row.push(p.notes||"");}
+      const codeNum=+row[5];
       ctx.fillStyle=ri%2?"#f8fafc":"#ffffff";ctx.fillRect(12,y,tw-24,rh);
       ctx.fillStyle="#e2e8f0";ctx.fillRect(12,y+rh-0.5,tw-24,0.5);
       ctx.font=fs+"px Inter,sans-serif";x=tw-14;
       row.forEach((cell,ci)=>{
-        ctx.fillStyle=ci===5?clr[+cell]||"#334155":"#334155";
-        if(ci===5)ctx.font="bold "+fs+"px Inter,sans-serif";else ctx.font=fs+"px Inter,sans-serif";
-        let t=cell;const mw=cw[ci]-8;
-        if(ctx.measureText(t).width>mw){while(ctx.measureText(t+"\u2026").width>mw&&t.length>1)t=t.slice(0,-1);t+="\u2026";}
-        ctx.fillText(t,x-4,y+rh/2);x-=cw[ci];
+        if(ci===5){
+          // Rounded pill badge for code
+          const codeLbl={1:"Green",2:"Yellow",3:"Red"};
+          const lbl=codeLbl[codeNum]||cell;
+          ctx.font="bold "+(fs-2)+"px Inter,sans-serif";
+          const tw2=ctx.measureText(lbl).width;
+          const pw=tw2+12,ph=fs+4,pr=ph/2;
+          const px=x-cw[ci]/2-pw/2,py=y+rh/2-ph/2;
+          ctx.fillStyle=clr[codeNum]||"#334155";
+          ctx.beginPath();ctx.moveTo(px+pr,py);ctx.lineTo(px+pw-pr,py);ctx.quadraticCurveTo(px+pw,py,px+pw,py+pr);ctx.quadraticCurveTo(px+pw,py+ph,px+pw-pr,py+ph);ctx.lineTo(px+pr,py+ph);ctx.quadraticCurveTo(px,py+ph,px,py+pr);ctx.quadraticCurveTo(px,py,px+pr,py);ctx.closePath();ctx.fill();
+          ctx.fillStyle="#ffffff";ctx.textAlign="center";
+          ctx.fillText(lbl,px+pw/2,y+rh/2);
+          ctx.textAlign="right";
+        }else{
+          ctx.fillStyle=ci===0?"#94a3b8":"#334155";
+          ctx.font=fs+"px Inter,sans-serif";
+          let t=cell;const mw=cw[ci]-8;
+          if(ctx.measureText(t).width>mw){while(ctx.measureText(t+"\u2026").width>mw&&t.length>1)t=t.slice(0,-1);t+="\u2026";}
+          ctx.fillText(t,x-4,y+rh/2);
+        }
+        x-=cw[ci];
       });y+=rh;
     });
     y+=10; // gap between wards
@@ -648,11 +672,11 @@ function vWard(){
 
 function vDetail(){
   const p=S.editP,cv=S.showCivil[p._k]?p.civil:mask(p.civil);
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="margin:0 8px"><h1 style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</h1><p>Details</p></div></div><div class="sp" style="padding:14px 16px 100px"><div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0 16px;margin-bottom:18px;box-shadow:var(--shadow)"><div class="ir"><span style="color:var(--muted);font-weight:600">Civil ID</span><span style="font-weight:700;display:flex;align-items:center;gap:6px">'+esc(cv)+'<button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="tc">'+(S.showCivil[p._k]?I.eyeOff:I.eye)+'</button></span></div><div class="ir"><span style="color:var(--muted);font-weight:600">Nationality</span><span style="font-weight:700">'+esc(p.nat||"\u2014")+'</span></div></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="ew" placeholder="e.g. W21" value="'+esc(p.ward||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="erm" placeholder="e.g. R8" value="'+esc(p.room||"")+'"></div></div><div class="fg"><label class="fl">Severity Code</label><div class="cg2">'+[1,2,3,4].map(c=>'<div class="co'+(S.editCode==c?" s"+c:"")+'" data-cpick="e" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="en" placeholder="Notes..." value="'+esc(p.notes||"")+'"></div><div class="fg"><label class="fl">Doctor</label><input class="fi" id="edr" placeholder="Attending doctor..." value="'+esc(p.doctor||"")+'"></div><div style="display:flex;gap:8px"><button class="btn" id="bs">'+I.save+' Save</button><button class="btnd" id="bd">'+I.trash+'</button></div></div></div>';
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="margin:0 8px"><h1 style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</h1><p>Details</p></div></div><div class="sp" style="padding:14px 16px 100px"><div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0 16px;margin-bottom:18px;box-shadow:var(--shadow)"><div class="ir"><span style="color:var(--muted);font-weight:600">Civil ID</span><span style="font-weight:700;display:flex;align-items:center;gap:6px">'+esc(cv)+'<button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="tc">'+(S.showCivil[p._k]?I.eyeOff:I.eye)+'</button></span></div><div class="ir"><span style="color:var(--muted);font-weight:600">Nationality</span><span style="font-weight:700">'+esc(p.nat||"\u2014")+'</span></div></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="ew" placeholder="e.g. W21" value="'+esc(p.ward||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="erm" placeholder="e.g. R8" value="'+esc(p.room||"")+'"></div></div><div class="fg"><label class="fl">Severity Code</label><div class="cg2">'+[1,2,3].map(c=>'<div class="co'+(S.editCode==c?" s"+c:"")+'" data-cpick="e" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="en" placeholder="Notes..." value="'+esc(p.notes||"")+'"></div><div class="fg"><label class="fl">Doctor</label><input class="fi" id="edr" placeholder="Attending doctor..." value="'+esc(p.doctor||"")+'"></div><div class="fg"><label class="fl">Diagnosis</label><input class="fi" id="edx" placeholder="Diagnosis..." value="'+esc(p.diagnosis||"")+'"></div><div style="display:flex;gap:8px"><button class="btn" id="bs">'+I.save+' Save</button><button class="btnd" id="bd">'+I.trash+'</button></div></div></div>';
 }
 
 function vAdd(){
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Add Patient</h1></div><div style="width:36px"></div></div><div class="sp" style="padding:14px 14px 100px"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="an" placeholder="Name" autocomplete="off" value="'+esc(S._addName||"")+'"></div><div class="fg"><label class="fl">Civil ID *</label><input class="fi" id="ac" placeholder="Civil ID" inputmode="numeric" autocomplete="off" value="'+esc(S._addCivil||"")+'"></div><div class="fg"><label class="fl">Nationality</label><input class="fi" id="at" placeholder="Nationality" autocomplete="off" value="'+esc(S._addNat||"")+'"></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="aw" placeholder="e.g. W21" autocomplete="off" value="'+esc(S._addWard||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="arm" placeholder="e.g. R8" autocomplete="off" value="'+esc(S._addRoom||"")+'"></div></div><div class="fg"><label class="fl">Severity Code *</label><div class="cg2">'+[1,2,3,4].map(c=>'<div class="co'+(S.addCode==c?" s"+c:"")+'" data-cpick="a" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="ao" placeholder="Notes..." autocomplete="off" value="'+esc(S._addNotes||"")+'"></div><div class="fg"><label class="fl">Doctor</label><input class="fi" id="adr" placeholder="Attending doctor..." autocomplete="off" value="'+esc(S._addDoctor||"")+'"></div><button class="btn" id="bsa">'+I.plus+' Add Patient</button></div></div>';
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Add Patient</h1></div><div style="width:36px"></div></div><div class="sp" style="padding:14px 14px 100px"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="an" placeholder="Name" autocomplete="off" value="'+esc(S._addName||"")+'"></div><div class="fg"><label class="fl">Civil ID *</label><input class="fi" id="ac" placeholder="Civil ID" inputmode="numeric" autocomplete="off" value="'+esc(S._addCivil||"")+'"></div><div class="fg"><label class="fl">Nationality</label><input class="fi" id="at" placeholder="Nationality" autocomplete="off" value="'+esc(S._addNat||"")+'"></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="aw" placeholder="e.g. W21" autocomplete="off" value="'+esc(S._addWard||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="arm" placeholder="e.g. R8" autocomplete="off" value="'+esc(S._addRoom||"")+'"></div></div><div class="fg"><label class="fl">Severity Code *</label><div class="cg2">'+[1,2,3].map(c=>'<div class="co'+(S.addCode==c?" s"+c:"")+'" data-cpick="a" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="ao" placeholder="Notes..." autocomplete="off" value="'+esc(S._addNotes||"")+'"></div><div class="fg"><label class="fl">Doctor</label><input class="fi" id="adr" placeholder="Attending doctor..." autocomplete="off" value="'+esc(S._addDoctor||"")+'"></div><div class="fg"><label class="fl">Diagnosis</label><input class="fi" id="adx" placeholder="Diagnosis..." autocomplete="off" value="'+esc(S._addDiagnosis||"")+'"></div><button class="btn" id="bsa">'+I.plus+' Add Patient</button></div></div>';
 }
 
 function vAdmin(){
@@ -708,7 +732,7 @@ function vAdmin(){
           +'<div class="ocr-row2"><div class="ocr-field'+(missingWard?" ocr-miss":"")+'"><label>Ward *</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="ward" value="'+esc(p.ward||"")+'"></div>'
           +'<div class="ocr-field"><label>Room</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="room" value="'+esc(p.room||"")+'"></div></div>'
           +'<div class="ocr-row2"><div class="ocr-field"><label>Nationality</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="nat" value="'+esc(p.nat||"")+'"></div>'
-          +'<div class="ocr-field"><label>Code</label><select class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="code"><option value="1"'+(p.code==1?' selected':'')+'>1 Green</option><option value="2"'+(p.code==2||!p.code?' selected':'')+'>2 Yellow</option><option value="3"'+(p.code==3?' selected':'')+'>3 Red</option><option value="4"'+(p.code==4?' selected':'')+'>4 Critical</option></select></div></div>'
+          +'<div class="ocr-field"><label>Code</label><select class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="code"><option value="1"'+(p.code==1?' selected':'')+'>1 Green</option><option value="2"'+(p.code==2||!p.code?' selected':'')+'>2 Yellow</option><option value="3"'+(p.code==3?' selected':'')+'>3 Red</option></select></div></div>'
           +'<div class="ocr-field"><label>Notes</label><input class="fi ocr-fi" data-ocr-f="'+i+'" data-ocr-k="notes" value="'+esc(p.notes||"")+'"></div>'
           +'</div></div>';
       });
@@ -769,7 +793,7 @@ function updatePinDisplay(){
 function bindAll(){
   document.querySelectorAll("[data-unit]").forEach(b=>b.addEventListener("click",()=>{S.pinTarget=b.dataset.unit;S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S._pinNeedsLayout=true;S.screen="pin";render();}));
   const bfl=$("bfl");if(bfl)bfl.addEventListener("click",()=>{
-    const r=$("cr");r.innerHTML='<div class="c-overlay"><div class="modal"><div style="font-size:15px;font-weight:800;margin-bottom:6px">Export PDF</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">Include attending doctor names in the export?</div><div style="display:flex;gap:8px"><button class="btn2" id="ex-no" style="flex:1">Without Doctors</button><button class="btn" id="ex-yes" style="flex:1">With Doctors</button></div></div></div>';
+    const r=$("cr");r.innerHTML='<div class="c-overlay"><div class="modal"><div style="font-size:15px;font-weight:800;margin-bottom:6px">Export PDF</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">Include doctor names &amp; diagnosis in the export?</div><div style="display:flex;gap:8px"><button class="btn2" id="ex-no" style="flex:1">Without</button><button class="btn" id="ex-yes" style="flex:1">With Doctors &amp; Dx</button></div></div></div>';
     $("ex-yes").addEventListener("click",()=>{r.innerHTML="";exportFullList(true);});
     $("ex-no").addEventListener("click",()=>{r.innerHTML="";exportFullList(false);});
   });
@@ -777,7 +801,7 @@ function bindAll(){
   const ba=$("ba");if(ba)ba.addEventListener("click",()=>{S.pinTarget="ADMIN";S.pinVal="";S.pinError=false;S.pinOk=false;S._pinChecking=false;S._pinNeedsLayout=true;S.screen="pin";render();});
   const bb=$("bb");if(bb)bb.addEventListener("click",()=>{if(S.screen==="ward"||S.screen==="admin"){S.screen="home";S.showCivil={};S._fromAdmin=false;render();}else if(S.screen==="wardview"){S.screen="home";render();}else if(S.screen==="detail"||S.screen==="add"){if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";render();}else if(S._fromWardView){S._fromWardView=false;S.screen="wardview";render();}else{S.screen="ward";render();}}else if(S.screen==="pin"){S.screen="home";render();}});
   const bdl=$("bdl");if(bdl)bdl.addEventListener("click",()=>{
-    const r=$("cr");r.innerHTML='<div class="c-overlay"><div class="modal"><div style="font-size:15px;font-weight:800;margin-bottom:6px">Export PNG</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">Include attending doctor names?</div><div style="display:flex;gap:8px"><button class="btn2" id="ex-no" style="flex:1">Without Doctors</button><button class="btn" id="ex-yes" style="flex:1">With Doctors</button></div></div></div>';
+    const r=$("cr");r.innerHTML='<div class="c-overlay"><div class="modal"><div style="font-size:15px;font-weight:800;margin-bottom:6px">Export PNG</div><div style="font-size:12px;color:var(--muted);margin-bottom:20px">Include doctor names &amp; diagnosis?</div><div style="display:flex;gap:8px"><button class="btn2" id="ex-no" style="flex:1">Without</button><button class="btn" id="ex-yes" style="flex:1">With Doctors &amp; Dx</button></div></div></div>';
     $("ex-yes").addEventListener("click",()=>{r.innerHTML="";backupPNG(true);});
     $("ex-no").addEventListener("click",()=>{r.innerHTML="";backupPNG(false);});
   });
@@ -787,11 +811,11 @@ function bindAll(){
   const si=$("si");if(si)si.addEventListener("input",e=>{S.search=e.target.value;render();});
   document.querySelectorAll(".pc").forEach(c=>c.addEventListener("click",()=>{const p=S.patients.find(x=>x._k===c.dataset.key);if(p){S.editP=p;S.editCode=p.code;S.screen="detail";render();}}));
   document.querySelectorAll("[data-cpick='e']").forEach(c=>c.addEventListener("click",()=>{S.editCode=+c.dataset.code;render();}));
-  document.querySelectorAll("[data-cpick='a']").forEach(c=>c.addEventListener("click",()=>{const an=$("an"),ac=$("ac"),at=$("at"),aw=$("aw"),arm=$("arm"),ao=$("ao"),adr=$("adr");if(an)S._addName=an.value;if(ac)S._addCivil=ac.value;if(at)S._addNat=at.value;if(aw)S._addWard=aw.value;if(arm)S._addRoom=arm.value;if(ao)S._addNotes=ao.value;if(adr)S._addDoctor=adr.value;S.addCode=+c.dataset.code;render();}));
-  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{const ward=$("ew").value.trim(),room=$("erm")?$("erm").value.trim():"",notes=$("en").value.trim(),doctor=$("edr")?$("edr").value.trim():"";if(ward.length>30){toast("Ward too long","err");return;}if(room.length>30){toast("Room too long","err");return;}if(notes.length>500){toast("Notes too long","err");return;}if(doctor.length>100){toast("Doctor name too long","err");return;}bs.disabled=true;const data={...S.editP,ward,room,code:S.editCode,notes,doctor,ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);audit("edit",S.unit,data.name);toast("Saved");}catch(e){await LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});await _offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}if(S._fromWardView){S._fromWardView=false;S.screen="wardview";}else if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";await listenAll();}else{S.screen="ward";}render();});
+  document.querySelectorAll("[data-cpick='a']").forEach(c=>c.addEventListener("click",()=>{const an=$("an"),ac=$("ac"),at=$("at"),aw=$("aw"),arm=$("arm"),ao=$("ao"),adr=$("adr"),adx=$("adx");if(an)S._addName=an.value;if(ac)S._addCivil=ac.value;if(at)S._addNat=at.value;if(aw)S._addWard=aw.value;if(arm)S._addRoom=arm.value;if(ao)S._addNotes=ao.value;if(adr)S._addDoctor=adr.value;if(adx)S._addDiagnosis=adx.value;S.addCode=+c.dataset.code;render();}));
+  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{const ward=$("ew").value.trim(),room=$("erm")?$("erm").value.trim():"",notes=$("en").value.trim(),doctor=$("edr")?$("edr").value.trim():"",diagnosis=$("edx")?$("edx").value.trim():"";if(ward.length>30){toast("Ward too long","err");return;}if(room.length>30){toast("Room too long","err");return;}if(notes.length>500){toast("Notes too long","err");return;}if(doctor.length>100){toast("Doctor name too long","err");return;}if(diagnosis.length>200){toast("Diagnosis too long","err");return;}bs.disabled=true;const data={...S.editP,ward,room,code:S.editCode,notes,doctor,diagnosis,ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);audit("edit",S.unit,data.name);toast("Saved");}catch(e){await LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});await _offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}if(S._fromWardView){S._fromWardView=false;S.screen="wardview";}else if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";await listenAll();}else{S.screen="ward";}render();});
   const bd=$("bd");if(bd)bd.addEventListener("click",async()=>{if(!await confirm2("Delete?","Remove \""+esc(S.editP.name)+"\"?"))return;try{await remove(ref(db,"patients/"+S.unit+"/"+S.editP._k));audit("delete",S.unit,S.editP.name);toast("Deleted");}catch(e){await LS.queueOp({type:"remove",path:"patients/"+S.unit+"/"+S.editP._k});await _offlineRemove(S.unit,S.editP._k);toast("Deleted offline","ok");}if(S._fromWardView){S._fromWardView=false;S.screen="wardview";}else if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";await listenAll();}else{S.screen="ward";}render();});
-  const badd=$("badd");if(badd)badd.addEventListener("click",()=>{S.addCode=null;S._addName="";S._addCivil="";S._addNat="";S._addWard="";S._addRoom="";S._addNotes="";S._addDoctor="";S.screen="add";render();});
-  const bsa=$("bsa");if(bsa)bsa.addEventListener("click",async()=>{const n=$("an").value.trim(),c=$("ac").value.trim(),w=$("aw").value.trim(),rm=$("arm")?$("arm").value.trim():"",nat=$("at").value.trim(),notes=$("ao").value.trim(),doctor=$("adr")?$("adr").value.trim():"";if(!n||!c||!w||!S.addCode){toast("Fill required","err");return;}
+  const badd=$("badd");if(badd)badd.addEventListener("click",()=>{S.addCode=null;S._addName="";S._addCivil="";S._addNat="";S._addWard="";S._addRoom="";S._addNotes="";S._addDoctor="";S._addDiagnosis="";S.screen="add";render();});
+  const bsa=$("bsa");if(bsa)bsa.addEventListener("click",async()=>{const n=$("an").value.trim(),c=$("ac").value.trim(),w=$("aw").value.trim(),rm=$("arm")?$("arm").value.trim():"",nat=$("at").value.trim(),notes=$("ao").value.trim(),doctor=$("adr")?$("adr").value.trim():"",diagnosis=$("adx")?$("adx").value.trim():"";if(!n||!c||!w||!S.addCode){toast("Fill required","err");return;}
     if(n.length>200){toast("Name too long (max 200)","err");return;}
     if(c.length>20){toast("Civil ID too long","err");return;}
     if(!/^\d+$/.test(c)){toast("Civil ID must be numeric","err");return;}
@@ -800,7 +824,7 @@ function bindAll(){
     if(nat.length>50){toast("Nationality too long","err");return;}
     if(notes.length>500){toast("Notes too long (max 500)","err");return;}
     // Duplicate detection by Civil ID
-    const dup=S.patients.find(p=>p.civil&&p.civil===c);if(dup&&!confirm("Patient with Civil ID "+c+" already exists ("+dup.name+"). Add anyway?")){return;}if(doctor.length>100){toast("Doctor name too long","err");return;}bsa.disabled=true;const data={name:n,civil:c,nat,ward:w,room:rm,code:S.addCode,notes,doctor,ts:Date.now()};try{await push(ref(db,"patients/"+S.unit),data);audit("add",S.unit,data.name);toast("Added");}catch(e){const offKey="off_"+Date.now();await LS.queueOp({type:"push",path:"patients/"+S.unit,data});await _offlineUpdate(S.unit,offKey,data);toast("Added offline","ok");}S.screen="ward";render();});
+    const dup=S.patients.find(p=>p.civil&&p.civil===c);if(dup&&!confirm("Patient with Civil ID "+c+" already exists ("+dup.name+"). Add anyway?")){return;}if(doctor.length>100){toast("Doctor name too long","err");return;}if(diagnosis.length>200){toast("Diagnosis too long","err");return;}bsa.disabled=true;const data={name:n,civil:c,nat,ward:w,room:rm,code:S.addCode,notes,doctor,diagnosis,ts:Date.now()};try{await push(ref(db,"patients/"+S.unit),data);audit("add",S.unit,data.name);toast("Added");}catch(e){const offKey="off_"+Date.now();await LS.queueOp({type:"push",path:"patients/"+S.unit,data});await _offlineUpdate(S.unit,offKey,data);toast("Added offline","ok");}S.screen="ward";render();});
   document.querySelectorAll("[data-tab]").forEach(t=>t.addEventListener("click",()=>{S.adminTab=t.dataset.tab;render();}));
   // Admin accordion toggles
   document.querySelectorAll("[data-toggle]").forEach(h=>h.addEventListener("click",()=>{const u=h.dataset.toggle;S.expandedUnits[u]=!S.expandedUnits[u];render();}));
@@ -960,15 +984,26 @@ async function boot(){try{
 }catch(e){showFatal("Boot Error: "+e.message);}}
 boot();
 
-// Service Worker registration — only update if new version available
+// Service Worker registration
 if("serviceWorker" in navigator){
+  let _swReloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(!_swReloading){_swReloading=true;window.location.reload();}
+  });
+  navigator.serviceWorker.addEventListener("message",e=>{
+    if(e.data&&e.data.type==="SW_UPDATED"&&!_swReloading){_swReloading=true;window.location.reload();}
+  });
   navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"})
     .then(r=>{
       r.update().catch(()=>{});
+      // If a worker is already waiting, tell it to activate now
+      if(r.waiting){r.waiting.postMessage({type:"SKIP_WAITING"});}
       r.addEventListener("updatefound",()=>{
         const nw=r.installing;
         if(nw)nw.addEventListener("statechange",()=>{
-          if(nw.state==="activated"){window.location.reload();}
+          if(nw.state==="installed"&&navigator.serviceWorker.controller){
+            nw.postMessage({type:"SKIP_WAITING"});
+          }
         });
       });
     })

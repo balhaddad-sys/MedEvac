@@ -16,6 +16,7 @@
           "room": { ".validate": "newData.isString() && newData.val().length <= 30" },
           "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
           "doctor": { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "diagnosis": { ".validate": "newData.isString() && newData.val().length <= 200" },
           "ts": { ".validate": "newData.isNumber()" },
           "$other": { ".validate": false }
         }

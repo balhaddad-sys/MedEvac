@@ -294,7 +294,7 @@ exports.ocrExtract = functions.region("europe-west1").https.onCall(async (data, 
       nat: String(p.nat || "").slice(0, 50),
       ward: String(p.ward || "").slice(0, 30),
       room: String(p.room || "").slice(0, 30),
-      code: Math.max(1, Math.min(4, parseInt(p.code) || 2)),
+      code: Math.max(1, Math.min(3, parseInt(p.code) || 2)),
       notes: String(p.notes || "").slice(0, 500),
     }));
 

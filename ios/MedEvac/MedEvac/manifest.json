@@ -1,0 +1,18 @@
+{
+  "name": "MedEvac",
+  "short_name": "MedEvac",
+  "description": "MedEvac - Secure Patient Registry System",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#122a57",
+  "theme_color": "#122a57",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["medical"],
+  "icons": [
+    { "src": "/images/icon-48x48.png", "sizes": "48x48", "type": "image/png" },
+    { "src": "/images/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/images/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -13,6 +13,8 @@ jobs:
     runs-on: macos-latest
     env:
       DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+      HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+      HAS_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -38,9 +40,8 @@ jobs:
           xcodegen generate
 
       - name: Install Apple certificate and provisioning profile
-        if: ${{ env.HAS_SIGNING == 'true' }}
+        if: env.HAS_SIGNING == 'true'
         env:
-          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
           CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
@@ -63,9 +64,7 @@ jobs:
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Build unsigned (simulator)
-        if: ${{ env.HAS_SIGNING != 'true' }}
-        env:
-          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: env.HAS_SIGNING != 'true'
         run: |
           cd ios/MedEvac
           xcodebuild build \
@@ -79,9 +78,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Archive signed IPA
-        if: ${{ env.HAS_SIGNING == 'true' }}
-        env:
-          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: env.HAS_SIGNING == 'true'
         run: |
           cd ios/MedEvac
           xcodebuild archive \
@@ -98,9 +95,8 @@ jobs:
             -exportPath build/export
 
       - name: Upload to TestFlight
-        if: ${{ env.HAS_API_KEY == 'true' }}
+        if: env.HAS_SIGNING == 'true' && env.HAS_API_KEY == 'true'
         env:
-          HAS_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 != '' }}
           API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
           API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           API_KEY_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
@@ -115,9 +111,7 @@ jobs:
             --apiIssuer "$API_KEY_ISSUER"
 
       - name: Upload simulator build
-        if: ${{ env.HAS_SIGNING != 'true' }}
-        env:
-          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: env.HAS_SIGNING != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: medevac-ios-simulator
@@ -125,9 +119,7 @@ jobs:
           retention-days: 30
 
       - name: Upload signed IPA
-        if: ${{ env.HAS_SIGNING == 'true' }}
-        env:
-          HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
+        if: env.HAS_SIGNING == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: medevac-ios-ipa

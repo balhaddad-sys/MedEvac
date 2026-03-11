@@ -162,7 +162,8 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, UISc
         "securetoken.googleapis.com",
         "generativelanguage.googleapis.com",
         "fonts.googleapis.com",
-        "fonts.gstatic.com"
+        "fonts.gstatic.com",
+        "cloudfunctions.net"
     ]
 
     private func isAllowedHost(_ host: String) -> Bool {
