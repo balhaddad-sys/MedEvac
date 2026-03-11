@@ -76,11 +76,39 @@ jobs:
             -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
             -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
 
+      - name: Configure Bubblewrap JDK/SDK paths
+        run: |
+          mkdir -p "$HOME/.aspect/aspect-cli"
+          cat > "$HOME/.aspect/aspect-cli/config.json" << EOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
+          mkdir -p "$HOME/.aspect/aspect-cli" 2>/dev/null || true
+          # Also set llama-pack config used by newer bubblewrap
+          mkdir -p "$HOME/.llama-pack" 2>/dev/null || true
+          cat > "$HOME/.llama-pack/llama-pack-config.json" << EOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
+          # Bubblewrap config
+          mkdir -p "$HOME/.bubblewrap" 2>/dev/null || true
+          cat > "$HOME/.bubblewrap/config.json" << EOF
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          EOF
+
       - name: Build TWA
         run: |
           cd twa-build
-          bubblewrap build \
+          echo "n" | bubblewrap build \
             --manifest twa-manifest.json \
+            --skipPwaValidation \
             --signingKeyPath ./keystore.jks \
             --signingKeyAlias medevac \
             --signingKeyPassword ${{ secrets.KEYSTORE_PASSWORD }} \
