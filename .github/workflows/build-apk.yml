@@ -52,6 +52,11 @@ jobs:
           include ':app'
           EOF
 
+          # gradle.properties
+          cat > twa-build/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          EOF
+
           # Root build.gradle
           cat > twa-build/build.gradle << 'EOF'
           buildscript {
