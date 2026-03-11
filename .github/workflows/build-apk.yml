@@ -10,6 +10,8 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      HOSTING_URL: unit-e-1d07b.web.app
     steps:
       - uses: actions/checkout@v4
 
@@ -22,61 +24,202 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
-
-      - name: Configure Bubblewrap
-        run: |
-          mkdir -p "$HOME/.bubblewrap"
-          cat > "$HOME/.bubblewrap/config.json" << EOF
-          {
-            "jdkPath": "$JAVA_HOME",
-            "androidSdkPath": "$ANDROID_HOME"
-          }
-          EOF
-
       - name: Generate signing keystore
         run: |
-          mkdir -p twa-build
           keytool -genkeypair \
             -alias medevac \
             -keyalg RSA -keysize 2048 \
             -validity 10000 \
-            -keystore twa-build/keystore.jks \
+            -keystore ${{ runner.temp }}/keystore.jks \
             -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -dname "CN=MedEvac, O=MedEvac, L=Kuwait, C=KW"
 
-      - name: Initialize and build TWA
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          HOSTING_URL: ${{ secrets.FIREBASE_HOSTING_URL }}
+      - name: Create TWA Gradle project
+        run: |
+          mkdir -p twa-build/app/src/main/res/values
+          mkdir -p twa-build/app/src/main/res/xml
+          mkdir -p twa-build/app/src/main/res/drawable
+          mkdir -p twa-build/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p twa-build/gradle/wrapper
+
+          # Download icon
+          curl -sL "https://${HOSTING_URL}/icon-512.png" -o twa-build/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+          # settings.gradle
+          cat > twa-build/settings.gradle << 'EOF'
+          rootProject.name = 'MedEvac'
+          include ':app'
+          EOF
+
+          # Root build.gradle
+          cat > twa-build/build.gradle << 'EOF'
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          # App build.gradle
+          cat > twa-build/app/build.gradle << APPEOF
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.medevac.app'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.medevac.app"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode ${GITHUB_RUN_NUMBER}
+                  versionName "1.0.${GITHUB_RUN_NUMBER}"
+
+                  manifestPlaceholders = [
+                      hostName: "${HOSTING_URL}",
+                      assetStatements: '[{"relation": ["delegate_permission/common.handle_all_urls"], "target": {"namespace": "web", "site": "https://${HOSTING_URL}"}}]'
+                  ]
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.browser:browser:1.8.0'
+          }
+          APPEOF
+
+          # AndroidManifest.xml
+          cat > twa-build/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <application
+                  android:name=".Application"
+                  android:label="MedEvac"
+                  android:icon="@mipmap/ic_launcher"
+                  android:theme="@style/AppTheme"
+                  android:allowBackup="true">
+
+                  <meta-data
+                      android:name="asset_statements"
+                      android:value='${assetStatements}' />
+
+                  <activity
+                      android:name=".LauncherActivity"
+                      android:exported="true"
+                      android:theme="@style/LaunchTheme">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <intent-filter android:autoVerify="true">
+                          <action android:name="android.intent.action.VIEW" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                          <category android:name="android.intent.category.BROWSABLE" />
+                          <data android:scheme="https" android:host="${hostName}" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          # LauncherActivity.java
+          mkdir -p twa-build/app/src/main/java/com/medevac/app
+          cat > twa-build/app/src/main/java/com/medevac/app/LauncherActivity.java << JAVAEOF
+          package com.medevac.app;
+
+          import android.net.Uri;
+          import android.os.Bundle;
+          import androidx.browser.customtabs.CustomTabsIntent;
+          import androidx.browser.trusted.TrustedWebActivityIntentBuilder;
+          import androidx.browser.trusted.TrustedWebActivityIntent;
+          import android.app.Activity;
+
+          public class LauncherActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  Uri uri = Uri.parse("https://${HOSTING_URL}/");
+                  TrustedWebActivityIntentBuilder builder = new TrustedWebActivityIntentBuilder(uri);
+                  TrustedWebActivityIntent twaIntent = builder.build(
+                      new CustomTabsIntent.Builder().build().intent
+                  );
+                  startActivity(twaIntent.getIntent());
+                  finish();
+              }
+          }
+          JAVAEOF
+
+          # Application.java
+          cat > twa-build/app/src/main/java/com/medevac/app/Application.java << 'JAVAEOF'
+          package com.medevac.app;
+
+          public class Application extends android.app.Application {
+          }
+          JAVAEOF
+
+          # styles
+          cat > twa-build/app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+                  <item name="android:statusBarColor">#1d4ed8</item>
+                  <item name="android:navigationBarColor">#1e40af</item>
+              </style>
+              <style name="LaunchTheme" parent="AppTheme">
+                  <item name="android:windowBackground">#0f172a</item>
+              </style>
+          </resources>
+          EOF
+
+          # Gradle wrapper properties
+          cat > twa-build/gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+          # gradle-wrapper.jar — use gradle init to bootstrap
+          cd twa-build
+          gradle wrapper --gradle-version 8.5
+
+      - name: Build APK
         run: |
           cd twa-build
-
-          # Use expect-like approach: pipe all answers to bubblewrap init
-          # Answers: n (no JDK install), then all defaults
-          printf 'n\n' | bubblewrap init \
-            --manifest "https://${HOSTING_URL}/manifest.json" \
-            --directory .
-
-          # Now build with Gradle directly — no interactive prompts
-          chmod +x ./gradlew
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file="$(pwd)/keystore.jks" \
-            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.store.file="${{ runner.temp }}/keystore.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias=medevac \
-            -Pandroid.injected.signing.key.password="$KEYSTORE_PASSWORD"
+            -Pandroid.injected.signing.key.password="${{ secrets.KEYSTORE_PASSWORD }}"
 
-          # Find the output APK
-          find . -name "*.apk" -type f | head -5
-          cp app/build/outputs/apk/release/app-release.apk ../medevac-release.apk 2>/dev/null || \
-          cp $(find . -name "*release*.apk" -type f | head -1) ../medevac-release.apk
+      - name: Copy APK
+        run: |
+          cp twa-build/app/build/outputs/apk/release/app-release.apk medevac-release.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
