@@ -299,6 +299,9 @@ workflows:
 
       - name: Build iOS app
         script: |
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION' ios/MedEvac/project.yml | head -1 | sed 's/.*: //' | tr -d '"')
+          VERSION=$(grep 'MARKETING_VERSION' ios/MedEvac/project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Building version $VERSION ($BUILD)"
           cd ios/MedEvac
           xcodebuild archive \
             -project MedEvac.xcodeproj \
@@ -307,6 +310,8 @@ workflows:
             -configuration Release \
             -archivePath build/MedEvac.xcarchive \
             DEVELOPMENT_TEAM="YPGU5K4U57" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            MARKETING_VERSION="$VERSION" \
             clean archive
 
       - name: Export IPA
