@@ -11,10 +11,6 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
-    env:
-      DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
-      HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
-      HAS_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +18,9 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: latest-stable
+
+      - name: Install Codemagic CLI tools
+        run: pip3 install codemagic-cli-tools
 
       - name: Copy web assets into iOS project
         run: |
@@ -39,47 +38,27 @@ jobs:
           cd ios/MedEvac
           xcodegen generate
 
-      - name: Install Apple certificate and provisioning profile
-        if: env.HAS_SIGNING == 'true'
+      - name: Fetch signing files
         env:
-          CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ github.run_id }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: 346WF7MN3Z
+          APP_STORE_CONNECT_ISSUER_ID: 5988b726-9289-48c6-ac37-4c603d29fa6a
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-          echo -n "$CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          security import $CERTIFICATE_PATH -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
-          echo -n "$PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      - name: Build unsigned (simulator)
-        if: env.HAS_SIGNING != 'true'
-        run: |
-          cd ios/MedEvac
-          xcodebuild build \
-            -project MedEvac.xcodeproj \
-            -scheme MedEvac \
-            -sdk iphonesimulator \
-            -configuration Release \
-            -derivedDataPath build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+          openssl genrsa -out /tmp/cert_key.pem 2048
+          app-store-connect fetch-signing-files com.medevac.app \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --certificate-key @file:/tmp/cert_key.pem \
+            --create
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
 
       - name: Archive signed IPA
-        if: env.HAS_SIGNING == 'true'
         run: |
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION' ios/MedEvac/project.yml | head -1 | sed 's/.*: //' | tr -d '"')
+          VERSION=$(grep 'MARKETING_VERSION' ios/MedEvac/project.yml | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          echo "Building version $VERSION ($BUILD)"
           cd ios/MedEvac
           xcodebuild archive \
             -project MedEvac.xcodeproj \
@@ -87,7 +66,9 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             -archivePath build/MedEvac.xcarchive \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
+            DEVELOPMENT_TEAM="YPGU5K4U57" \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            MARKETING_VERSION="$VERSION"
 
           xcodebuild -exportArchive \
             -archivePath build/MedEvac.xcarchive \
@@ -95,31 +76,16 @@ jobs:
             -exportPath build/export
 
       - name: Upload to TestFlight
-        if: env.HAS_SIGNING == 'true' && env.HAS_API_KEY == 'true'
         env:
-          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          API_KEY_ISSUER: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: 346WF7MN3Z
+          APP_STORE_CONNECT_ISSUER_ID: 5988b726-9289-48c6-ac37-4c603d29fa6a
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/private_keys
-          echo -n "$API_KEY_BASE64" | base64 --decode -o ~/private_keys/AuthKey_${API_KEY_ID}.p8
+          app-store-connect publish \
+            --path ios/MedEvac/build/export/MedEvac.ipa
 
-          xcrun altool --upload-app \
-            -f ios/MedEvac/build/export/MedEvac.ipa \
-            -t ios \
-            --apiKey "$API_KEY_ID" \
-            --apiIssuer "$API_KEY_ISSUER"
-
-      - name: Upload simulator build
-        if: env.HAS_SIGNING != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: medevac-ios-simulator
-          path: ios/MedEvac/build/Build/Products/Release-iphonesimulator/MedEvac.app
-          retention-days: 30
-
-      - name: Upload signed IPA
-        if: env.HAS_SIGNING == 'true'
+      - name: Upload IPA artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: medevac-ios-ipa
@@ -129,4 +95,4 @@ jobs:
       - name: Cleanup keychain
         if: always()
         run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+          keychain cleanup 2>/dev/null || true
