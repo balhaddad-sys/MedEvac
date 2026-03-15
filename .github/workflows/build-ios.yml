@@ -20,7 +20,7 @@ jobs:
           xcode-version: latest-stable
 
       - name: Install Codemagic CLI tools
-        run: pip3 install codemagic-cli-tools
+        run: pip3 install codemagic-cli-tools --break-system-packages
 
       - name: Copy web assets into iOS project
         run: |
