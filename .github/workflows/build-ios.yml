@@ -70,6 +70,36 @@ jobs:
             CURRENT_PROJECT_VERSION="$BUILD" \
             MARKETING_VERSION="$VERSION"
 
+          # Find the installed App Store provisioning profile name
+          PROFILE_PATH=$(ls ~/Library/MobileDevice/Provisioning\ Profiles/IOS_APP_STORE_*.mobileprovision 2>/dev/null | head -1)
+          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin)
+          echo "Using profile: $PROFILE_NAME"
+
+          # Generate ExportOptions.plist with the actual profile name
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store-connect</string>
+              <key>teamID</key>
+              <string>YPGU5K4U57</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.medevac.app</key>
+                  <string>$PROFILE_NAME</string>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+
           xcodebuild -exportArchive \
             -archivePath build/MedEvac.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
