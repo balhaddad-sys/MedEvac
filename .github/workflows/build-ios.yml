@@ -70,10 +70,11 @@ jobs:
             CURRENT_PROJECT_VERSION="$BUILD" \
             MARKETING_VERSION="$VERSION"
 
-          # Find the installed App Store provisioning profile (search both common locations)
+          # Find the installed App Store provisioning profile and extract its name
           PROFILE_PATH=$(find ~/Library -name "IOS_APP_STORE_*.mobileprovision" 2>/dev/null | head -1)
           echo "Found profile at: $PROFILE_PATH"
-          PROFILE_NAME=$(security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin)
+          PROFILE_NAME=$(openssl smime -in "$PROFILE_PATH" -inform DER -verify -noverify 2>/dev/null | \
+            /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin)
           echo "Using profile: $PROFILE_NAME"
 
           # Generate ExportOptions.plist with the actual profile name
