@@ -31,6 +31,8 @@ targets:
     info:
       path: MedEvac/Info.plist
       properties:
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleIconName: AppIcon
         ITSAppUsesNonExemptEncryption: false
         LSApplicationCategoryType: public.app-category.medical
