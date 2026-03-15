@@ -12,10 +12,5 @@
     <true/>
     <key>signingStyle</key>
     <string>manual</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>com.medevac.app</key>
-        <string>Meward new</string>
-    </dict>
 </dict>
 </plist>
