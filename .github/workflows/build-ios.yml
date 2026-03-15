@@ -70,11 +70,8 @@ jobs:
             CURRENT_PROJECT_VERSION="$BUILD" \
             MARKETING_VERSION="$VERSION"
 
-          # Find the installed App Store provisioning profile and extract its name
-          PROFILE_PATH=$(find ~/Library -name "IOS_APP_STORE_*.mobileprovision" 2>/dev/null | head -1)
-          echo "Found profile at: $PROFILE_PATH"
-          PROFILE_NAME=$(openssl smime -in "$PROFILE_PATH" -inform DER -verify -noverify 2>/dev/null | \
-            /usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin)
+          # Read the profile name from xcodeproj (set by xcode-project use-profiles)
+          PROFILE_NAME=$(grep 'PROVISIONING_PROFILE_SPECIFIER' MedEvac.xcodeproj/project.pbxproj | head -1 | sed 's/.*= "\(.*\)".*/\1/')
           echo "Using profile: $PROFILE_NAME"
 
           # Generate ExportOptions.plist with the actual profile name
