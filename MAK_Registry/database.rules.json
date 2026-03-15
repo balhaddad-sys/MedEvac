@@ -17,6 +17,22 @@
           "notes": { ".validate": "newData.isString() && newData.val().length <= 500" },
           "doctor": { ".validate": "newData.isString() && newData.val().length <= 100" },
           "diagnosis": { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "category": { ".validate": "newData.isString() && newData.val().length <= 30" },
+          "ts": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "teams": {
+      ".read": "auth != null",
+      "$unit": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "$unit.matches(/^[A-E]$/)",
+        "$doctor": {
+          ".validate": "newData.hasChildren(['name', 'ts'])",
+          "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100" },
+          "specialty": { ".validate": "newData.isString() && newData.val().length <= 100" },
           "ts": { ".validate": "newData.isNumber()" },
           "$other": { ".validate": false }
         }
