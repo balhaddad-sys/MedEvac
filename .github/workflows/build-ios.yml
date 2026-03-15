@@ -40,7 +40,7 @@ jobs:
 
       - name: Fetch signing files
         env:
-          APP_STORE_CONNECT_KEY_IDENTIFIER: 346WF7MN3Z
+          APP_STORE_CONNECT_KEY_IDENTIFIER: R46235PLDH
           APP_STORE_CONNECT_ISSUER_ID: 5988b726-9289-48c6-ac37-4c603d29fa6a
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload to TestFlight
         env:
-          APP_STORE_CONNECT_KEY_IDENTIFIER: 346WF7MN3Z
+          APP_STORE_CONNECT_KEY_IDENTIFIER: R46235PLDH
           APP_STORE_CONNECT_ISSUER_ID: 5988b726-9289-48c6-ac37-4c603d29fa6a
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: |
