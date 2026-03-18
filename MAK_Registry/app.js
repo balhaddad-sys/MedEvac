@@ -11,6 +11,10 @@ const fnSetPin=httpsCallable(fns,"setPin");
 const fnHasPins=httpsCallable(fns,"hasPins");
 const fnOcrExtract=httpsCallable(fns,"ocrExtract");
 const fnGetAuditLog=httpsCallable(fns,"getAuditLog");
+const fnSetSheetUrl=httpsCallable(fns,"setSheetUrl");
+const fnGetSheetUrls=httpsCallable(fns,"getSheetUrls");
+const fnFetchSheet=httpsCallable(fns,"fetchSheet");
+const fnSyncSheet=httpsCallable(fns,"syncSheet");
 let _authReady=false,_authUid=null;
 onAuthStateChanged(auth,u=>{_authUid=u?u.uid:null;_authReady=true;});
 let _authFailed=false;
@@ -204,7 +208,7 @@ function openInstallPrompt(){
   else hint.textContent="Open the browser menu (three dots) and choose Add to Home screen.";
 }
 
-let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinOk:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:"",expandedUnits:{},adminSearch:"",adminFilter:"all",_pinNeedsLayout:true,exportData:{},unitOcrResults:[],unitOcrSel:[],unitOcrLoading:false,unitOcrImg:null,teamDoctors:{},assignDocKey:null,assignSel:{},addingDoctor:false,_teamUnit:null};
+let S={screen:"home",unit:null,patients:[],allData:{},pinStatus:{},filter:"all",search:"",online:navigator.onLine,editP:null,editCode:null,addCode:null,pinTarget:null,pinVal:"",pinError:false,pinOk:false,pinFails:0,pinLockUntil:0,ocrImg:null,ocrB64:null,ocrResults:[],ocrSel:[],ocrLoading:false,adminTab:"overview",showCivil:{},_bp:false,adminPin:"",expandedUnits:{},adminSearch:"",adminFilter:"all",_pinNeedsLayout:true,exportData:{},unitOcrResults:[],unitOcrSel:[],unitOcrLoading:false,unitOcrImg:null,teamDoctors:{},assignDocKey:null,assignSel:{},addingDoctor:false,_teamUnit:null,sheetUrls:{},sheetResults:[],sheetSel:[],sheetLoading:false,sheetUnit:null};
 async function listenUnit(uid){if(S.unit)off(ref(db,"patients/"+S.unit));S.unit=uid;
   // Load cached data immediately
   const cached=await LS.load("patients_"+uid);
@@ -682,8 +686,8 @@ function vWard(){
 }
 
 function vDetail(){
-  const p=S.editP,cv=S.showCivil[p._k]?p.civil:mask(p.civil);
-  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="margin:0 8px"><h1 style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</h1><p>Details</p></div></div><div class="sp" style="padding:14px 16px 100px"><div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:0 16px;margin-bottom:18px;box-shadow:var(--shadow)"><div class="ir"><span style="color:var(--muted);font-weight:600">Civil ID</span><span style="font-weight:700;display:flex;align-items:center;gap:6px">'+esc(cv)+'<button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px" id="tc">'+(S.showCivil[p._k]?I.eyeOff:I.eye)+'</button></span></div><div class="ir"><span style="color:var(--muted);font-weight:600">Nationality</span><span style="font-weight:700">'+esc(p.nat||"\u2014")+'</span></div></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="ew" placeholder="e.g. W21" value="'+esc(p.ward||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="erm" placeholder="e.g. R8" value="'+esc(p.room||"")+'"></div></div><div class="fg"><label class="fl">Severity Code</label><div class="cg2">'+[1,2,3].map(c=>'<div class="co'+(S.editCode==c?" s"+c:"")+'" data-cpick="e" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="en" placeholder="Notes..." value="'+esc(p.notes||"")+'"></div><div class="fg"><label class="fl">Doctor</label><input class="fi" id="edr" placeholder="Attending doctor..." value="'+esc(p.doctor||"")+'"></div><div class="fg"><label class="fl">Diagnosis</label><input class="fi" id="edx" placeholder="Diagnosis..." value="'+esc(p.diagnosis||"")+'"></div><div style="display:flex;gap:8px"><button class="btn" id="bs">'+I.save+' Save</button><button class="btnd" id="bd">'+I.trash+'</button></div></div></div>';
+  const p=S.editP;
+  return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="margin:0 8px"><h1 style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.name)+'</h1><p>Edit Patient</p></div></div><div class="sp" style="padding:14px 16px 100px"><div class="fg"><label class="fl">Full Name *</label><input class="fi" id="ename" placeholder="Name" value="'+esc(p.name||"")+'"></div><div class="fg"><label class="fl">Civil ID *</label><input class="fi" id="ecivil" placeholder="Civil ID" inputmode="numeric" value="'+esc(p.civil||"")+'"></div><div class="fg"><label class="fl">Nationality</label><input class="fi" id="enat" placeholder="Nationality" value="'+esc(p.nat||"")+'"></div><div style="display:flex;gap:8px"><div class="fg" style="flex:1"><label class="fl">Ward *</label><input class="fi" id="ew" placeholder="e.g. W21" value="'+esc(p.ward||"")+'"></div><div class="fg" style="flex:1"><label class="fl">Room / Bed</label><input class="fi" id="erm" placeholder="e.g. R8" value="'+esc(p.room||"")+'"></div></div><div class="fg"><label class="fl">Severity Code</label><div class="cg2">'+[1,2,3].map(c=>'<div class="co'+(S.editCode==c?" s"+c:"")+'" data-cpick="e" data-code="'+c+'"><div class="cn">'+c+'</div><div class="ct">'+cc(c).label+'</div></div>').join("")+'</div></div><div class="fg"><label class="fl">Notes</label><input class="fi" id="en" placeholder="Notes..." value="'+esc(p.notes||"")+'"></div><div class="fg"><label class="fl">Doctor</label><input class="fi" id="edr" placeholder="Attending doctor..." value="'+esc(p.doctor||"")+'"></div><div class="fg"><label class="fl">Diagnosis</label><input class="fi" id="edx" placeholder="Diagnosis..." value="'+esc(p.diagnosis||"")+'"></div><div style="display:flex;gap:8px"><button class="btn" id="bs">'+I.save+' Save</button><button class="btnd" id="bd">'+I.trash+'</button></div></div></div>';
 }
 
 function vAdd(){
@@ -691,7 +695,7 @@ function vAdd(){
 }
 
 function vAdmin(){
-  const tabs=[{id:"overview",l:"Overview"},{id:"ocr",l:"OCR"},{id:"audit",l:"Audit"},{id:"pins",l:"Security"}];let c="";
+  const tabs=[{id:"overview",l:"Overview"},{id:"ocr",l:"OCR"},{id:"sheets",l:"Sheets"},{id:"audit",l:"Audit"},{id:"pins",l:"Security"}];let c="";
   if(S.adminTab==="overview"){
     const allPatients=[];
     ["A","B","C","D","E"].forEach(u=>["M","F"].forEach(g=>{const uid=u+"_"+g;Object.entries(S.allData[uid]||{}).forEach(([k,v])=>allPatients.push({...v,_k:k,_uid:uid,_unit:u,_gender:g}));}));
@@ -776,6 +780,47 @@ function vAdmin(){
     }
   }
   else if(S.adminTab==="pins"){const labels={A_M:"A Male",A_F:"A Female",B_M:"B Male",B_F:"B Female",C_M:"C Male",C_F:"C Female",D_M:"D Male",D_F:"D Female",E_M:"E Male",E_F:"E Female",ADMIN:"Admin"};c='<div style="background:var(--rbg);border:1px solid var(--rbd);border-radius:var(--radius-xs);padding:12px;margin-bottom:14px;font-size:11px;color:var(--r);font-weight:600;display:flex;gap:8px;letter-spacing:.2px">'+I.lock+' Keep PINs secret</div>'+Object.entries(labels).map(([uid,l])=>'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);"><div style="flex:1;font-weight:700;font-size:13px">'+l+'</div><input class="fi" id="p-'+uid+'" placeholder="'+(S.pinStatus[uid]?"\u2022\u2022\u2022\u2022":"New")+'" maxlength="6" type="password" style="width:70px;text-align:center;font-size:16px;font-weight:900;letter-spacing:3px;padding:8px" autocomplete="off"><button class="btn" style="width:auto;padding:8px 12px" data-sp="'+uid+'">'+I.save+'</button></div>').join("")+'<div style="margin-top:20px;padding-top:16px;border-top:1.5px solid var(--border)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Data Tools</div><button class="btn2" id="bmigrate" style="font-size:12px;padding:10px">Migrate Ward/Room Data</button></div>';}
+  else if(S.adminTab==="sheets"){
+    if(!S._sheetsLoaded){
+      c='<div style="text-align:center;padding:40px"><button class="btn" id="bloadsheets">Load Sheet Settings</button><div style="font-size:11px;color:var(--muted);margin-top:8px">Configure Google Sheets auto-sync per unit</div></div>';
+    }else{
+      c='<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow)">'
+        +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Smart Sync</div>'
+        +'<div style="font-size:12px;color:var(--txt);line-height:1.6">'
+        +'<b>Sync</b> reads your Google Sheet and automatically:<br>'
+        +'&bull; <span style="color:var(--g);font-weight:700">Adds</span> new patients not yet in the system<br>'
+        +'&bull; <span style="color:var(--y);font-weight:700">Updates</span> existing patients if details changed<br>'
+        +'&bull; <span style="color:var(--r);font-weight:700">Discharges</span> patients removed from the sheet<br>'
+        +'&bull; <b>Skips</b> duplicates \u2014 matches by patient name</div></div>';
+      c+=["A","B","C","D","E"].map(u=>{
+        return["M","F"].map(g=>{
+          const uid=u+"_"+g;
+          const url=S.sheetUrls[uid]||"";
+          const syncing=S._syncingUnit===uid;
+          const result=S._syncResults&&S._syncResults[uid];
+          let statusHtml="";
+          if(result){
+            statusHtml='<div style="background:var(--gbg);border:1px solid var(--gbd);border-radius:var(--radius-xs);padding:10px;margin-top:8px;font-size:11px;line-height:1.6">'
+              +'<div style="font-weight:700;color:var(--g);margin-bottom:4px">Last sync result</div>'
+              +(result.added?'<div><span style="color:var(--g);font-weight:700">+'+result.added+'</span> added</div>':'')
+              +(result.updated?'<div><span style="color:var(--y);font-weight:700">~'+result.updated+'</span> updated</div>':'')
+              +(result.discharged?'<div><span style="color:var(--r);font-weight:700">-'+result.discharged+'</span> discharged</div>':'')
+              +(result.unchanged?'<div><span style="color:var(--muted)">'+result.unchanged+'</span> unchanged</div>':'')
+              +'<div style="color:var(--muted);margin-top:2px">'+result.total+' patients in sheet</div></div>';
+          }
+          return'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);padding:14px;margin-bottom:8px;box-shadow:var(--shadow)">'
+            +'<div style="font-weight:700;font-size:13px;margin-bottom:8px">Unit '+u+' \u2014 '+(g==="M"?"Male":"Female")+'</div>'
+            +'<input class="fi sheet-url" id="su-'+uid+'" placeholder="Paste Google Sheets URL..." value="'+esc(url)+'" style="margin-bottom:8px;font-size:12px">'
+            +'<div style="display:flex;gap:6px">'
+            +'<button class="btn2" style="flex:1;padding:9px;font-size:11px" data-sheet-save="'+uid+'">'+I.save+' Save</button>'
+            +'<button class="btn" style="flex:1;padding:9px;font-size:11px'+(url&&!syncing?'':';opacity:.4;pointer-events:none')+'" data-sheet-sync="'+uid+'">'+(syncing?'<div class="loader" style="width:14px;height:14px;border-width:2px;margin:0 auto"></div>':'Sync Now')+'</button>'
+            +'</div>'
+            +statusHtml
+            +'</div>';
+        }).join("");
+      }).join("");
+    }
+  }
   return'<div class="screen"><div class="hdr"><button class="hbtn" id="bb">'+I.back+'</button><div class="hdr-c" style="text-align:center"><h1>Admin</h1></div><div style="width:36px"></div></div><div class="tabs">'+tabs.map(t=>'<div class="tab'+(S.adminTab===t.id?" act":"")+'" data-tab="'+t.id+'">'+t.l+'</div>').join("")+'</div><div class="sp" style="padding:10px 12px 80px">'+c+'</div></div>';
 }
 
@@ -1223,7 +1268,7 @@ function bindAll(){
   document.querySelectorAll(".pc").forEach(c=>c.addEventListener("click",()=>{const p=S.patients.find(x=>x._k===c.dataset.key);if(p){S.editP=p;S.editCode=p.code;S.screen="detail";render();}}));
   document.querySelectorAll("[data-cpick='e']").forEach(c=>c.addEventListener("click",()=>{S.editCode=+c.dataset.code;render();}));
   document.querySelectorAll("[data-cpick='a']").forEach(c=>c.addEventListener("click",()=>{const an=$("an"),ac=$("ac"),at=$("at"),aw=$("aw"),arm=$("arm"),ao=$("ao"),adr=$("adr"),adx=$("adx");if(an)S._addName=an.value;if(ac)S._addCivil=ac.value;if(at)S._addNat=at.value;if(aw)S._addWard=aw.value;if(arm)S._addRoom=arm.value;if(ao)S._addNotes=ao.value;if(adr)S._addDoctor=adr.value;if(adx)S._addDiagnosis=adx.value;S.addCode=+c.dataset.code;render();}));
-  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{const ward=$("ew").value.trim(),room=$("erm")?$("erm").value.trim():"",notes=$("en").value.trim(),doctor=$("edr")?$("edr").value.trim():"",diagnosis=$("edx")?$("edx").value.trim():"";if(ward.length>30){toast("Ward too long","err");return;}if(room.length>30){toast("Room too long","err");return;}if(notes.length>500){toast("Notes too long","err");return;}if(doctor.length>100){toast("Doctor name too long","err");return;}if(diagnosis.length>200){toast("Diagnosis too long","err");return;}bs.disabled=true;const data={...S.editP,ward,room,code:S.editCode,notes,doctor,diagnosis,ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);audit("edit",S.unit,data.name);toast("Saved");}catch(e){await LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});await _offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}if(S._fromWardView){S._fromWardView=false;S.screen="wardview";}else if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";await listenAll();}else{S.screen="ward";}render();});
+  const bs=$("bs");if(bs)bs.addEventListener("click",async()=>{const name=$("ename")?$("ename").value.trim():"",civil=$("ecivil")?$("ecivil").value.trim():"",nat=$("enat")?$("enat").value.trim():"",ward=$("ew").value.trim(),room=$("erm")?$("erm").value.trim():"",notes=$("en").value.trim(),doctor=$("edr")?$("edr").value.trim():"",diagnosis=$("edx")?$("edx").value.trim():"";if(!name){toast("Name is required","err");return;}if(!civil){toast("Civil ID is required","err");return;}if(name.length>200){toast("Name too long (max 200)","err");return;}if(civil.length>20){toast("Civil ID too long","err");return;}if(!/^\d+$/.test(civil)){toast("Civil ID must be numeric","err");return;}if(nat.length>50){toast("Nationality too long","err");return;}if(ward.length>30){toast("Ward too long","err");return;}if(room.length>30){toast("Room too long","err");return;}if(notes.length>500){toast("Notes too long","err");return;}if(doctor.length>100){toast("Doctor name too long","err");return;}if(diagnosis.length>200){toast("Diagnosis too long","err");return;}bs.disabled=true;const data={...S.editP,name,civil,nat,ward,room,code:S.editCode,notes,doctor,diagnosis,ts:Date.now()};delete data._k;try{await set(ref(db,"patients/"+S.unit+"/"+S.editP._k),data);audit("edit",S.unit,data.name);toast("Saved");}catch(e){await LS.queueOp({type:"set",path:"patients/"+S.unit+"/"+S.editP._k,data});await _offlineUpdate(S.unit,S.editP._k,data);toast("Saved offline","ok");}if(S._fromWardView){S._fromWardView=false;S.screen="wardview";}else if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";await listenAll();}else{S.screen="ward";}render();});
   const bd=$("bd");if(bd)bd.addEventListener("click",async()=>{if(!await confirm2("Delete?","Remove \""+esc(S.editP.name)+"\"?"))return;try{await remove(ref(db,"patients/"+S.unit+"/"+S.editP._k));audit("delete",S.unit,S.editP.name);toast("Deleted");}catch(e){await LS.queueOp({type:"remove",path:"patients/"+S.unit+"/"+S.editP._k});await _offlineRemove(S.unit,S.editP._k);toast("Deleted offline","ok");}if(S._fromWardView){S._fromWardView=false;S.screen="wardview";}else if(S._fromAdmin){S._fromAdmin=false;S.screen="admin";await listenAll();}else{S.screen="ward";}render();});
   const badd=$("badd");if(badd)badd.addEventListener("click",()=>{S.addCode=null;S._addName="";S._addCivil="";S._addNat="";S._addWard="";S._addRoom="";S._addNotes="";S._addDoctor="";S._addDiagnosis="";S.screen="add";render();});
   const bsa=$("bsa");if(bsa)bsa.addEventListener("click",async()=>{const n=$("an").value.trim(),c=$("ac").value.trim(),w=$("aw").value.trim(),rm=$("arm")?$("arm").value.trim():"",nat=$("at").value.trim(),notes=$("ao").value.trim(),doctor=$("adr")?$("adr").value.trim():"",diagnosis=$("adx")?$("adx").value.trim():"";if(!n||!c||!w||!S.addCode){toast("Fill required","err");return;}
@@ -1325,6 +1370,40 @@ function bindAll(){
     S._auditLoading=false;render();
   });
   const bmig=$("bmigrate");if(bmig)bmig.addEventListener("click",async()=>{bmig.disabled=true;bmig.textContent="Migrating...";try{await migrateWardRoom();}catch(e){toast("Migration error: "+e.message,"err");}bmig.disabled=false;bmig.textContent="Migrate Ward/Room Data";});
+  // Sheets tab bindings
+  const bloadsheets=$("bloadsheets");if(bloadsheets)bloadsheets.addEventListener("click",async()=>{
+    if(!S.adminPin){toast("Admin session invalid","err");return;}
+    bloadsheets.disabled=true;bloadsheets.textContent="Loading...";
+    try{const res=await fnGetSheetUrls({adminPin:S.adminPin});S.sheetUrls=res.data||{};S._sheetsLoaded=true;}
+    catch(e){toast("Failed: "+(e.message||"error"),"err");}
+    render();
+  });
+  document.querySelectorAll("[data-sheet-save]").forEach(b=>b.addEventListener("click",async()=>{
+    const u=b.dataset.sheetSave;const url=$("su-"+u)?$("su-"+u).value.trim():"";
+    if(!S.adminPin){toast("Admin session invalid","err");return;}
+    b.disabled=true;
+    try{await fnSetSheetUrl({adminPin:S.adminPin,unit:u,url});S.sheetUrls[u]=url;toast(url?"URL saved":"URL cleared");}
+    catch(e){toast("Failed: "+(e.message||"error"),"err");}
+    b.disabled=false;render();
+  }));
+  document.querySelectorAll("[data-sheet-sync]").forEach(b=>b.addEventListener("click",async()=>{
+    const uid=b.dataset.sheetSync;
+    if(!S.adminPin){toast("Admin session invalid","err");return;}
+    if(!S.sheetUrls[uid]){toast("No sheet URL configured","err");return;}
+    S._syncingUnit=uid;if(!S._syncResults)S._syncResults={};render();
+    try{
+      const res=await fnSyncSheet({adminPin:S.adminPin,unit:uid});
+      const r=res.data;
+      S._syncResults[uid]=r;
+      const parts=[];
+      if(r.added)parts.push("+"+r.added+" added");
+      if(r.updated)parts.push(r.updated+" updated");
+      if(r.discharged)parts.push(r.discharged+" discharged");
+      if(!r.added&&!r.updated&&!r.discharged)parts.push("Already up to date");
+      toast(parts.join(", "));
+    }catch(e){toast("Sync failed: "+(e.message||"error"),"err");}
+    S._syncingUnit=null;await listenAll();render();
+  }));
 }
 
 async function checkPin(){
