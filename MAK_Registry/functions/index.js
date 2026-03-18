@@ -314,6 +314,19 @@ exports.ocrExtract = functions.region("europe-west1").https.onCall(async (data, 
   }
 });
 
+// Set minimum app version for force-update (admin-only)
+exports.setMinVersion = functions.region("europe-west1").https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Must be authenticated");
+  const { adminPin, version, storeUrl } = data;
+  if (!adminPin || typeof adminPin !== "string") throw new functions.https.HttpsError("invalid-argument", "Admin PIN required");
+  const adminSnap = await db.ref("pins/ADMIN").once("value");
+  const adminStored = adminSnap.val();
+  if (!adminStored || !verifyPin(adminPin, adminStored)) throw new functions.https.HttpsError("permission-denied", "Invalid admin PIN");
+  if (version) await db.ref("config/minAppVersion").set(version);
+  if (storeUrl) await db.ref("config/appStoreURL").set(storeUrl);
+  return { success: true };
+});
+
 // Google Sheets: save a sheet URL for a unit (admin-only)
 exports.setSheetUrl = functions.region("europe-west1").https.onCall(async (data, context) => {
   if (!context.auth) {

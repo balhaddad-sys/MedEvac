@@ -44,7 +44,9 @@
     },
     "config": {
       ".read": false,
-      ".write": false
+      ".write": false,
+      "minAppVersion": { ".read": true },
+      "appStoreURL": { ".read": true }
     },
     "backups": {
       ".read": false,

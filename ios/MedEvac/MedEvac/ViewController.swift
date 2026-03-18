@@ -10,12 +10,76 @@ class ViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, UISc
     // Match --pri: #0f172a
     private let bgColor = UIColor(red: 0.059, green: 0.09, blue: 0.165, alpha: 1.0)
 
+    private var appStoreURL = "https://apps.apple.com/app/medevac"
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = bgColor
         setupWebView()
         setupSplash()
-        loadApp()
+        checkForceUpdate { needsUpdate in
+            if needsUpdate {
+                self.showForceUpdateAlert()
+            } else {
+                self.loadApp()
+            }
+        }
+    }
+
+    private func checkForceUpdate(completion: @escaping (Bool) -> Void) {
+        let base = "https://unit-e-1d07b-default-rtdb.europe-west1.firebasedatabase.app/config"
+        guard let versionURL = URL(string: "\(base)/minAppVersion.json"),
+              let storeURL = URL(string: "\(base)/appStoreURL.json") else { completion(false); return }
+
+        // Fetch minimum version
+        URLSession.shared.dataTask(with: versionURL) { data, _, error in
+            guard let data = data, error == nil,
+                  let minVersion = try? JSONDecoder().decode(String.self, from: data) else {
+                DispatchQueue.main.async { completion(false) }; return
+            }
+            // Also fetch App Store URL if available
+            URLSession.shared.dataTask(with: storeURL) { data2, _, _ in
+                if let data2 = data2, let url = try? JSONDecoder().decode(String.self, from: data2), !url.isEmpty {
+                    DispatchQueue.main.async { self.appStoreURL = url }
+                }
+                let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+                DispatchQueue.main.async {
+                    completion(self.compareVersions(current, minVersion) < 0)
+                }
+            }.resume()
+        }.resume()
+    }
+
+    private func compareVersions(_ a: String, _ b: String) -> Int {
+        let aParts = a.split(separator: ".").map { Int($0) ?? 0 }
+        let bParts = b.split(separator: ".").map { Int($0) ?? 0 }
+        let count = max(aParts.count, bParts.count)
+        for i in 0..<count {
+            let av = i < aParts.count ? aParts[i] : 0
+            let bv = i < bParts.count ? bParts[i] : 0
+            if av < bv { return -1 }
+            if av > bv { return 1 }
+        }
+        return 0
+    }
+
+    private func showForceUpdateAlert() {
+        UIView.animate(withDuration: 0.3) { self.splashView.alpha = 0 }
+        let alert = UIAlertController(
+            title: "Update Required",
+            message: "A new version of MedEvac is available. Please update to continue.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Update Now", style: .default) { _ in
+            if let url = URL(string: self.appStoreURL) {
+                UIApplication.shared.open(url)
+            }
+            // Show alert again after returning from App Store
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                self.showForceUpdateAlert()
+            }
+        })
+        present(alert, animated: true)
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
