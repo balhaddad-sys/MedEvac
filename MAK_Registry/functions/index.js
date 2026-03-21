@@ -982,40 +982,56 @@ async function doSyncUnit(unit, uidForAudit) {
       newSyncState[spId] = match.key;
       unchanged++;
     } else {
-      // Safety: before adding, check ALL DB patients (including already-matched ones)
-      // for any similar name in the same ward. This catches matching algorithm failures.
+      // Safety: before adding, check ALL DB patients in the entire unit.
+      // Uses multiple strategies: name matching, ward+room matching, and lenient cross-script.
       const spLatinSafe = toLatin(normName(sp.name)).replace(/ /g, "");
       const spWardSafe = normWard(sp.ward);
+      const spRoomSafe = normRoom(sp.room);
       let alreadyExists = null;
+      let matchedName = "";
+      let matchReason = "";
       for (const [eKey, ePat] of Object.entries(dbData)) {
-        if ((ePat.category || "").toLowerCase() === "discharged") continue;
-        const eWard = normWard(ePat.ward);
-        if (!spWardSafe || !eWard || spWardSafe !== eWard) continue;
         const eLatinFull = toLatin(normName(ePat.name));
         const eFirst = eLatinFull.split(" ")[0];
         const spFirst = spLatinSafe.split(" ")[0] || spLatinSafe;
-        // Check first name match
-        if (firstNameMatch(spFirst, eFirst)) { alreadyExists = eKey; break; }
-        // Check joined DB words match (e.g. "harakaman" vs "harka man")
+        // Check 1: same ward AND same room = same bed = same person
+        const eWard = normWard(ePat.ward);
+        const eRoom = normRoom(ePat.room);
+        if (spWardSafe && spRoomSafe && eWard && eRoom && spWardSafe === eWard && spRoomSafe === eRoom) {
+          alreadyExists = eKey; matchedName = ePat.name; matchReason = "same bed " + spWardSafe + "/" + spRoomSafe; break;
+        }
+        // Check 2: first name fuzzy match
+        if (firstNameMatch(spFirst, eFirst)) { alreadyExists = eKey; matchedName = ePat.name; matchReason = "firstName"; break; }
+        // Check 3: joined DB words match (e.g. "harakaman" vs "harka man tombaw")
         const eWords = eLatinFull.split(" ");
         let joined = "";
-        for (let w = 0; w < Math.min(eWords.length, 3); w++) {
+        for (let w = 0; w < Math.min(eWords.length, 4); w++) {
           joined += eWords[w];
-          if (firstNameMatch(spLatinSafe, joined)) { alreadyExists = eKey; break; }
+          if (firstNameMatch(spLatinSafe, joined)) { alreadyExists = eKey; matchedName = ePat.name; matchReason = "joinedWords"; break; }
         }
         if (alreadyExists) break;
-        // Check consonant skeleton of first name
+        // Check 4: sheet name contained in DB name or vice versa (cross-script)
+        if (spLatinSafe.length >= 3 && eLatinFull.replace(/ /g, "").length >= 3) {
+          const eFlatLatin = eLatinFull.replace(/ /g, "");
+          if (eFlatLatin.includes(spLatinSafe) || spLatinSafe.includes(eFlatLatin)) { alreadyExists = eKey; matchedName = ePat.name; matchReason = "contains"; break; }
+        }
+        // Check 5: consonant skeleton of first name
         const spFC = stripVowels(spFirst), eFC = stripVowels(eFirst);
-        if (spFC.length >= 3 && eFC.length >= 3 && nameSimilarity(spFC, eFC) >= 0.75) { alreadyExists = eKey; break; }
+        if (spFC.length >= 3 && eFC.length >= 3 && nameSimilarity(spFC, eFC) >= 0.75) { alreadyExists = eKey; matchedName = ePat.name; matchReason = "skeleton"; break; }
       }
 
       if (alreadyExists) {
-        // Patient already exists — don't add duplicate, just record in sync state
         newSyncState[spId] = alreadyExists;
-        console.log("Sync safety: skipped duplicate '" + sp.name + "' — matches DB key " + alreadyExists);
+        // If the matched entry is discharged, reactivate it
+        const matchedPat = dbData[alreadyExists];
+        if (matchedPat && (matchedPat.category || "").toLowerCase() === "discharged") {
+          writes["patients/" + unit + "/" + alreadyExists] = { ...matchedPat, category: sp.category || "Active", ts: Date.now() };
+          console.log("SYNC REACTIVATE: '" + sp.name + "' (" + matchReason + ") reactivated '" + matchedName + "'");
+        } else {
+          console.log("SYNC SAFETY: '" + sp.name + "' (" + matchReason + ") matches '" + matchedName + "' — skipped");
+        }
         unchanged++;
       } else {
-        // Genuinely new patient from sheet — add to database
         const newKey = db.ref("patients/" + unit).push().key;
         writes["patients/" + unit + "/" + newKey] = {
           name: sp.name.slice(0, 200), civil: (sp.civil || "").slice(0, 20),
@@ -1026,7 +1042,7 @@ async function doSyncUnit(unit, uidForAudit) {
           ts: Date.now(),
         };
         newSyncState[spId] = newKey; added++;
-        console.log("Sync: added new patient '" + sp.name + "' as " + newKey);
+        console.log("SYNC ADD: '" + sp.name + "' W:" + spWardSafe + " R:" + spRoomSafe + " (latin:" + spLatinSafe + ") — no match in " + Object.keys(dbData).length + " DB entries");
       }
     }
   }
