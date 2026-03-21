@@ -1001,20 +1001,53 @@ async function doSyncUnit(unit, uidForAudit) {
     }
   }
 
+  // Dedup cleanup: find unmatched DB entries that are duplicates of matched entries
+  // This cleans up duplicates created by previous broken sync cycles
+  let deduped = 0;
+  const unmatchedDbEntries = dbEntries.filter(([k]) => !matchedDbKeys.has(k));
+  const matchedDbEntries = dbEntries.filter(([k]) => matchedDbKeys.has(k));
+  for (const [uKey, uPat] of unmatchedDbEntries) {
+    if (writes["patients/" + unit + "/" + uKey]) continue; // already being discharged
+    const uLatin = toLatin(normName(uPat.name));
+    const uFirstLatin = uLatin.split(" ")[0];
+    const uWard = normWard(uPat.ward);
+    for (const [mKey, mPat] of matchedDbEntries) {
+      if (uKey === mKey) continue;
+      const mLatin = toLatin(normName(mPat.name));
+      const mFirstLatin = mLatin.split(" ")[0];
+      const mWard = normWard(mPat.ward);
+      // Same ward + first name match = duplicate
+      if (uWard && mWard && uWard === mWard && uFirstLatin && mFirstLatin && firstNameMatch(uFirstLatin, mFirstLatin)) {
+        writes["patients/" + unit + "/" + uKey] = { ...uPat, category: "Discharged", ts: Date.now() };
+        deduped++;
+        break;
+      }
+      // Cross-script: try joined words too
+      if (uWard && mWard && uWard === mWard) {
+        const uNoSpace = uLatin.replace(/ /g, ""), mNoSpace = mLatin.replace(/ /g, "");
+        if (uNoSpace && mNoSpace && firstNameMatch(uNoSpace, mNoSpace)) {
+          writes["patients/" + unit + "/" + uKey] = { ...uPat, category: "Discharged", ts: Date.now() };
+          deduped++;
+          break;
+        }
+      }
+    }
+  }
+
   // Atomic multi-path write: faster, all-or-nothing, reduces Firebase billing
   if (Object.keys(writes).length > 0) {
     await db.ref().update(writes);
   }
   await db.ref("config/sheetSync/" + unit).set(newSyncState);
 
-  if (added || discharged) {
+  if (added || discharged || deduped) {
     await db.ref("audit").push({
       action: "sheet_sync", unit, ts: Date.now(), uid: uidForAudit || "auto",
-      detail: "+" + added + " -" + discharged + " =" + unchanged,
+      detail: "+" + added + " -" + discharged + " dedup=" + deduped + " =" + unchanged,
     });
   }
 
-  return { added, updated: 0, discharged, unchanged, total: sheetPatients.length };
+  return { added, updated: 0, discharged, deduped, unchanged, total: sheetPatients.length };
 }
 
 // Scheduled auto-sync: runs every 5 minutes, syncs all units with configured sheets
