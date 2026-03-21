@@ -571,31 +571,54 @@ function findMatch(sp, dbEntries, prevSync) {
     const spFirstLatin = spLatin.split(" ")[0];
     const dbFirstLatin = dbLatin.split(" ")[0];
 
+    // Compute all name signals independently (NOT else-if) and take the best one.
+    // else-if chains break when an earlier condition is truthy but the inner check fails,
+    // blocking stronger signals below (e.g., Signal 4 blocks Signal 5 first-name match).
+    let nameScore = 0;
+
     // Signal 1: Exact normalized name match (same script)
-    if (spName && dbName && spName === dbName) { score += 100; }
-    // Signal 1b: Exact match after cross-script transliteration (e.g. "هاراكامان" == "harakaman")
-    else if (spLatin && dbLatin && spLatin === dbLatin) { score += 100; }
+    if (spName && dbName && spName === dbName) { nameScore = Math.max(nameScore, 100); }
+    // Signal 1b: Exact match after cross-script transliteration
+    if (spLatin && dbLatin && spLatin === dbLatin) { nameScore = Math.max(nameScore, 100); }
     // Signal 2: Ward + Room match — only strong if there's also partial name evidence
-    else if (spWard && spRoom && dbWard && dbRoom && spWard === dbWard && spRoom === dbRoom) {
+    if (spWard && spRoom && dbWard && dbRoom && spWard === dbWard && spRoom === dbRoom) {
       const nameOverlap = spFirstLatin && dbFirstLatin && firstNameMatch(spFirstLatin, dbFirstLatin);
-      score += nameOverlap ? 90 : 40; // 40 alone won't reach threshold of 50
+      nameScore = Math.max(nameScore, nameOverlap ? 90 : 40);
     }
     // Signal 3: One name contains the other (partial match, cross-script)
-    else if (spLatin && dbLatin && (dbLatin.includes(spLatin) || spLatin.includes(dbLatin))) { score += 70; }
+    if (spLatin && dbLatin && (dbLatin.includes(spLatin) || spLatin.includes(dbLatin))) { nameScore = Math.max(nameScore, 70); }
     // Signal 4: Fuzzy full-name similarity (cross-script, handles typos)
-    // Use lower threshold (0.55) when comparing across scripts (transliteration is lossy)
-    else if (spLatin && dbLatin) {
+    if (spLatin && dbLatin) {
       const sim = nameSimilarity(spLatin, dbLatin);
       const crossScript = hasArabic(spName) !== hasArabic(dbName);
-      if (sim >= (crossScript ? 0.55 : 0.7)) { score += 65; }
+      if (sim >= (crossScript ? 0.55 : 0.7)) { nameScore = Math.max(nameScore, 65); }
     }
-    // Signal 5: First name fuzzy match (cross-script)
-    else if (spFirstLatin && dbFirstLatin && firstNameMatch(spFirstLatin, dbFirstLatin)) { score += 55; }
-    // Signal 6: Consonant-skeleton match (handles Arabic vowel dropping: "mohammed"→"mhmmd" ≈ "mhmd"←"محمد")
-    else if (spLatin && dbLatin) {
+    // Signal 5: First name fuzzy match (cross-script) — critical for short sheet names vs full DB names
+    if (spFirstLatin && dbFirstLatin && firstNameMatch(spFirstLatin, dbFirstLatin)) { nameScore = Math.max(nameScore, 55); }
+    // Signal 5b: Sheet name matches joined first N words of DB name
+    // Handles "Harakaman" (sheet) vs "هاركا مان تومباو" (DB) where Arabic has spaces English doesn't
+    if (spLatin && dbLatin && nameScore < 55) {
+      const dbWords = dbLatin.split(" ");
+      if (dbWords.length >= 2) {
+        let joined = "";
+        for (let w = 0; w < Math.min(dbWords.length, 3); w++) {
+          joined += dbWords[w];
+          if (firstNameMatch(spLatin.replace(/ /g, ""), joined)) { nameScore = Math.max(nameScore, 55); break; }
+        }
+      }
+    }
+    // Signal 5c: First name consonant skeleton match (handles "abdolmohsen" vs "abdalmhsn")
+    if (spFirstLatin && dbFirstLatin && nameScore < 55) {
+      const spFC = stripVowels(spFirstLatin), dbFC = stripVowels(dbFirstLatin);
+      if (spFC.length >= 3 && dbFC.length >= 3 && nameSimilarity(spFC, dbFC) >= 0.75) { nameScore = Math.max(nameScore, 55); }
+    }
+    // Signal 6: Consonant-skeleton match on full name (handles Arabic vowel dropping)
+    if (spLatin && dbLatin) {
       const spCons = stripVowels(spLatin), dbCons = stripVowels(dbLatin);
-      if (spCons && dbCons && spCons.length >= 2 && dbCons.length >= 2 && nameSimilarity(spCons, dbCons) >= 0.65) { score += 60; }
+      if (spCons && dbCons && spCons.length >= 2 && dbCons.length >= 2 && nameSimilarity(spCons, dbCons) >= 0.65) { nameScore = Math.max(nameScore, 60); }
     }
+
+    score += nameScore;
 
     // Bonus: ward matches on top of name signal
     if (score > 0 && spWard && dbWard && spWard === dbWard) { score += 15; }
