@@ -634,6 +634,13 @@ function findMatch(sp, dbEntries, prevSync) {
       const prevKey = Object.values(prevSync).find(v => v === key);
       if (prevKey) score += 5;
     }
+    // Bonus: prefer DB entries with richer data (manually entered records with civil ID,
+    // nationality, full names) over sparse sync-created duplicates
+    if (score > 0) {
+      if (pat.civil && pat.civil.trim()) score += 30;
+      if (pat.nat && pat.nat.trim()) score += 15;
+      if (dbName.split(" ").length > spLatin.split(" ").length) score += 10;
+    }
 
     if (score > bestScore) {
       bestScore = score;
@@ -1001,35 +1008,49 @@ async function doSyncUnit(unit, uidForAudit) {
     }
   }
 
-  // Dedup cleanup: find unmatched DB entries that are duplicates of matched entries
-  // This cleans up duplicates created by previous broken sync cycles
+  // Dedup cleanup: find duplicate DB entries and discharge the sparser one
+  // (keeps the entry with more data: civil ID, nationality, longer name)
   let deduped = 0;
-  const unmatchedDbEntries = dbEntries.filter(([k]) => !matchedDbKeys.has(k));
-  const matchedDbEntries = dbEntries.filter(([k]) => matchedDbKeys.has(k));
-  for (const [uKey, uPat] of unmatchedDbEntries) {
-    if (writes["patients/" + unit + "/" + uKey]) continue; // already being discharged
-    const uLatin = toLatin(normName(uPat.name));
-    const uFirstLatin = uLatin.split(" ")[0];
-    const uWard = normWard(uPat.ward);
-    for (const [mKey, mPat] of matchedDbEntries) {
-      if (uKey === mKey) continue;
-      const mLatin = toLatin(normName(mPat.name));
-      const mFirstLatin = mLatin.split(" ")[0];
-      const mWard = normWard(mPat.ward);
-      // Same ward + first name match = duplicate
-      if (uWard && mWard && uWard === mWard && uFirstLatin && mFirstLatin && firstNameMatch(uFirstLatin, mFirstLatin)) {
-        writes["patients/" + unit + "/" + uKey] = { ...uPat, category: "Discharged", ts: Date.now() };
-        deduped++;
-        break;
-      }
-      // Cross-script: try joined words too
-      if (uWard && mWard && uWard === mWard) {
-        const uNoSpace = uLatin.replace(/ /g, ""), mNoSpace = mLatin.replace(/ /g, "");
-        if (uNoSpace && mNoSpace && firstNameMatch(uNoSpace, mNoSpace)) {
-          writes["patients/" + unit + "/" + uKey] = { ...uPat, category: "Discharged", ts: Date.now() };
-          deduped++;
-          break;
+  const allActiveEntries = dbEntries.filter(([k]) => !writes["patients/" + unit + "/" + k]);
+  function dataRichness(pat) {
+    let r = 0;
+    if (pat.civil && pat.civil.trim()) r += 30;
+    if (pat.nat && pat.nat.trim()) r += 15;
+    r += (pat.name || "").length;
+    return r;
+  }
+  function isDuplicate(aLatin, bLatin) {
+    const aFirst = aLatin.split(" ")[0], bFirst = bLatin.split(" ")[0];
+    if (firstNameMatch(aFirst, bFirst)) return true;
+    // Joined words match (e.g. "harakaman" vs "harka man")
+    const aNo = aLatin.replace(/ /g, ""), bNo = bLatin.replace(/ /g, "");
+    if (aNo && bNo && firstNameMatch(aNo, bNo)) return true;
+    return false;
+  }
+  const dedupChecked = new Set();
+  for (let i = 0; i < allActiveEntries.length; i++) {
+    const [aKey, aPat] = allActiveEntries[i];
+    if (dedupChecked.has(aKey)) continue;
+    const aLatin = toLatin(normName(aPat.name));
+    const aWard = normWard(aPat.ward);
+    for (let j = i + 1; j < allActiveEntries.length; j++) {
+      const [bKey, bPat] = allActiveEntries[j];
+      if (dedupChecked.has(bKey)) continue;
+      const bLatin = toLatin(normName(bPat.name));
+      const bWard = normWard(bPat.ward);
+      if (aWard && bWard && aWard === bWard && isDuplicate(aLatin, bLatin)) {
+        // Discharge the sparser entry, keep the richer one
+        const aRich = dataRichness(aPat), bRich = dataRichness(bPat);
+        const killKey = aRich >= bRich ? bKey : aKey;
+        const killPat = aRich >= bRich ? bPat : aPat;
+        writes["patients/" + unit + "/" + killKey] = { ...killPat, category: "Discharged", ts: Date.now() };
+        dedupChecked.add(killKey);
+        // Update sync state: point to the richer entry
+        const keepKey = aRich >= bRich ? aKey : bKey;
+        for (const [sid, skey] of Object.entries(newSyncState)) {
+          if (skey === killKey) { newSyncState[sid] = keepKey; break; }
         }
+        deduped++;
       }
     }
   }
