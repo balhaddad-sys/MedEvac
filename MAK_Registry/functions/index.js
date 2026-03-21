@@ -442,22 +442,66 @@ function normName(n) {
 function normRoom(r) {
   return (r || "").replace(/^R\s*/i, "").replace(/\s+/g, "").trim();
 }
-// Normalize ward: "W 5" -> "W5", "ward 5" -> "W5"
+// Normalize ward: "W 5" -> "W5", "ward 5" -> "W5", "جناح 5" -> "W5"
 function normWard(w) {
-  const m = (w || "").match(/W(?:ard)?\s*(\d+)/i);
-  return m ? "W" + m[1] : (w || "").replace(/\s+/g, "").toUpperCase();
+  const m = (w || "").match(/(?:W(?:ard)?|جناح)\s*(\d+)/i);
+  if (m) return "W" + m[1];
+  // Map Arabic ward names to standard codes
+  if ((w || "").includes("عناية مركزة")) return "ICU";
+  if ((w || "").includes("طوارئ")) return "ER";
+  return (w || "").replace(/\s+/g, "").toUpperCase();
 }
-// Common English-Arabic name mappings for first names
-const translit = {
-  "adel":"عادل","ahmed":"أحمد","abdullah":"عبدالله","abdullatif":"عبداللطيف",
-  "mohammed":"محمد","mohammad":"محمد","muhammad":"محمد",
-  "hassan":"حسن","hussain":"حسين","hasan":"حسن",
-  "ali":"علي","omar":"عمر","khalid":"خالد","fahad":"فهد","saleh":"صالح",
-  "nawaf":"نواف","jawad":"جواد","danim":"دانم","zulfekair":"ذوالفقار","zulfekar":"ذوالفقار",
-  "noura":"نورة","zahra":"زهراء","hisham":"هشام","bader":"بدر",
-  "mneer":"منير","antony":"أنتوني","rojelo":"روخيلو",
-  "abdullatif":"عبداللطيف","dalim":"دليم","muneer":"منير",
+// General-purpose Arabic → Latin transliteration (phonetic approximation)
+// Converts any Arabic text to a Latin equivalent for cross-script fuzzy matching
+// Note: و and ي are context-dependent vowel/consonant letters
+const ar2latMap = {
+  "ا":"a","أ":"a","إ":"i","آ":"aa","ب":"b","ت":"t","ث":"th","ج":"j","ح":"h","خ":"kh",
+  "د":"d","ذ":"dh","ر":"r","ز":"z","س":"s","ش":"sh","ص":"s","ض":"d","ط":"t","ظ":"z",
+  "ع":"a","غ":"gh","ف":"f","ق":"q","ك":"k","ل":"l","م":"m","ن":"n","ه":"h",
+  "ى":"a","ة":"a","ء":"","ئ":"e","ؤ":"o",
+  // Combined forms
+  "لا":"la","لأ":"la","لإ":"li","لآ":"laa",
 };
+// و and ي are handled specially: they can be consonants (w/y) or vowels (o,u/i,ee)
+const arConsonants = new Set("بتثجحخدذرزسشصضطظعغفقكلمنه");
+function arabicToLatin(s) {
+  if (!s) return "";
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    // Check two-char combos first (لا etc.)
+    const two = s[i] + (s[i + 1] || "");
+    if (ar2latMap[two]) { out += ar2latMap[two]; i++; continue; }
+    const ch = s[i];
+    if (ch === "و") {
+      // و after consonant = "o"/"u" vowel; at start or before consonant = "w"
+      const prev = s[i - 1];
+      out += (prev && arConsonants.has(prev)) ? "o" : "w";
+    } else if (ch === "ي") {
+      // ي after consonant = "i"/"ee" vowel; at start or before consonant = "y"
+      const prev = s[i - 1];
+      out += (prev && arConsonants.has(prev)) ? "i" : "y";
+    } else if (ar2latMap[ch] !== undefined) { out += ar2latMap[ch]; }
+    else if (/[a-z0-9]/i.test(ch)) { out += ch.toLowerCase(); }
+    else if (ch === " ") { out += " "; }
+    // Skip diacritics (tashkeel) and other marks
+  }
+  return out.replace(/\s+/g, " ").trim();
+}
+
+// Check if a string contains Arabic characters
+function hasArabic(s) { return /[\u0600-\u06FF]/.test(s || ""); }
+
+// Convert name to Latin for cross-script comparison
+function toLatin(s) {
+  if (!s) return "";
+  return hasArabic(s) ? arabicToLatin(s) : s.toLowerCase();
+}
+
+// Strip vowels for consonant-skeleton comparison (Arabic doesn't write most vowels)
+// "mohammed" -> "mhmmd", "mhmd" -> "mhmd" — much closer match
+function stripVowels(s) {
+  return (s || "").replace(/[aeiou]/gi, "");
+}
 
 // Levenshtein edit distance (single-row DP — O(n) space instead of O(m*n))
 function editDist(a, b) {
@@ -521,38 +565,45 @@ function findMatch(sp, dbEntries, prevSync) {
     // Signal 0: Civil ID exact match (unique national identifier — strongest possible signal)
     if (sp.civil && pat.civil && sp.civil.trim() && pat.civil.trim() && sp.civil.trim() === pat.civil.trim()) { score += 150; }
 
-    // Signal 1: Exact normalized name match (strongest)
+    // Cross-script support: convert both names to Latin for comparison
+    const spLatin = toLatin(spName);
+    const dbLatin = toLatin(dbName);
+    const spFirstLatin = spLatin.split(" ")[0];
+    const dbFirstLatin = dbLatin.split(" ")[0];
+
+    // Signal 1: Exact normalized name match (same script)
     if (spName && dbName && spName === dbName) { score += 100; }
+    // Signal 1b: Exact match after cross-script transliteration (e.g. "هاراكامان" == "harakaman")
+    else if (spLatin && dbLatin && spLatin === dbLatin) { score += 100; }
     // Signal 2: Ward + Room match — only strong if there's also partial name evidence
     else if (spWard && spRoom && dbWard && dbRoom && spWard === dbWard && spRoom === dbRoom) {
-      const nameOverlap = spFirstName && dbFirstName && firstNameMatch(spFirstName, dbFirstName);
+      const nameOverlap = spFirstLatin && dbFirstLatin && firstNameMatch(spFirstLatin, dbFirstLatin);
       score += nameOverlap ? 90 : 40; // 40 alone won't reach threshold of 50
     }
-    // Signal 3: One name contains the other (partial match)
-    else if (spName && dbName && (dbName.includes(spName) || spName.includes(dbName))) { score += 70; }
-    // Signal 4: Fuzzy full-name similarity (handles typos, transliteration variants)
-    else if (spName && dbName && nameSimilarity(spName, dbName) >= 0.7) { score += 65; }
-    // Signal 5: First name fuzzy match (handles "mohammed" vs "mohammad", "zulfekair" vs "zulfekar")
-    else if (spFirstName && dbFirstName && firstNameMatch(spFirstName, dbFirstName)) { score += 55; }
-    // Signal 6: First name matches via Arabic transliteration
-    else if (spFirstName && dbFirstName) {
-      // Sheet name -> Arabic: check if DB name contains the Arabic equivalent
-      const arName = translit[spFirstName];
-      if (arName && dbName.includes(arName)) { score += 60; }
-      else {
-        // Reverse: check all translit entries for DB first name
-        const revMatch = Object.entries(translit).find(([en]) => firstNameMatch(spFirstName, en));
-        if (revMatch && dbName.includes(revMatch[1])) { score += 60; }
-      }
+    // Signal 3: One name contains the other (partial match, cross-script)
+    else if (spLatin && dbLatin && (dbLatin.includes(spLatin) || spLatin.includes(dbLatin))) { score += 70; }
+    // Signal 4: Fuzzy full-name similarity (cross-script, handles typos)
+    // Use lower threshold (0.55) when comparing across scripts (transliteration is lossy)
+    else if (spLatin && dbLatin) {
+      const sim = nameSimilarity(spLatin, dbLatin);
+      const crossScript = hasArabic(spName) !== hasArabic(dbName);
+      if (sim >= (crossScript ? 0.55 : 0.7)) { score += 65; }
+    }
+    // Signal 5: First name fuzzy match (cross-script)
+    else if (spFirstLatin && dbFirstLatin && firstNameMatch(spFirstLatin, dbFirstLatin)) { score += 55; }
+    // Signal 6: Consonant-skeleton match (handles Arabic vowel dropping: "mohammed"→"mhmmd" ≈ "mhmd"←"محمد")
+    else if (spLatin && dbLatin) {
+      const spCons = stripVowels(spLatin), dbCons = stripVowels(dbLatin);
+      if (spCons && dbCons && spCons.length >= 2 && dbCons.length >= 2 && nameSimilarity(spCons, dbCons) >= 0.65) { score += 60; }
     }
 
     // Bonus: ward matches on top of name signal
     if (score > 0 && spWard && dbWard && spWard === dbWard) { score += 15; }
     // Bonus: room matches on top of other signals
     if (score > 0 && spRoom && dbRoom && spRoom === dbRoom) { score += 10; }
-    // Bonus: diagnosis similarity (extra confidence)
+    // Bonus: diagnosis similarity (extra confidence, cross-script)
     if (score > 0 && sp.diagnosis && pat.diagnosis) {
-      const spDx = normName(sp.diagnosis), dbDx = normName(pat.diagnosis);
+      const spDx = toLatin(normName(sp.diagnosis)), dbDx = toLatin(normName(pat.diagnosis));
       if (spDx && dbDx && (spDx.includes(dbDx) || dbDx.includes(spDx) || nameSimilarity(spDx, dbDx) >= 0.6)) { score += 10; }
     }
     // Bonus: was previously synced to this key
@@ -600,9 +651,10 @@ exports.syncSheet = functions.region("europe-west1").https.onCall(async (data, c
 });
 
 // Smart sheet parser: handles structured sheets with ward headers, sections, etc.
+// Supports both English and Arabic headers/labels.
 // Supports two formats:
 //   1. Flat table: first row has headers (Name, Civil ID, Ward, etc.)
-//   2. Structured: ward headers ("Ward 20"), section headers ("Male list (active)"),
+//   2. Structured: ward headers ("Ward 20" / "جناح 20"), section headers,
 //      with columns: Room/Ward | Patient name | Diagnosis | ? | Assigned Doctor | Status
 function parseSheetCSV(csv) {
   const lines = csv.split("\n").filter(l => l.trim());
@@ -610,7 +662,10 @@ function parseSheetCSV(csv) {
 
   // Check if this is a flat table (first row looks like headers)
   const firstRow = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
-  const headerKeywords = ["name", "patient", "civil", "ward", "room", "diagnosis", "doctor", "code", "severity"];
+  const headerKeywords = [
+    "name", "patient", "civil", "ward", "room", "diagnosis", "doctor", "code", "severity",
+    "اسم", "مريض", "مدني", "جناح", "غرفة", "سرير", "تشخيص", "طبيب", "دكتور", "حالة",
+  ];
   const headerMatches = firstRow.filter(h => headerKeywords.some(k => h.includes(k))).length;
 
   if (headerMatches >= 2) {
@@ -622,21 +677,54 @@ function parseSheetCSV(csv) {
   return parseStructuredSheet(lines);
 }
 
+// Helper: find first matching header value from a row object
+function findCol(row, keys) {
+  for (const k of keys) { if (row[k]) return row[k]; }
+  return "";
+}
+
 function parseFlatTable(lines, headers) {
   const patients = [];
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCSVRow(lines[i]);
     const row = {};
     headers.forEach((h, j) => { row[h] = (cols[j] || "").trim(); });
-    const name = row.name || row["full name"] || row["patient name"] || row["patient"] || "";
-    const civil = row.civil || row["civil id"] || row["civilid"] || row["id"] || "";
-    const nat = row.nat || row.nationality || row["nation"] || "";
-    const ward = row.ward || row["ward no"] || row["ward number"] || "";
-    const room = row.room || row["room no"] || row["bed"] || row["room / bed"] || "";
-    const code = parseInt(row.code || row.severity || row["severity code"] || "2") || 2;
-    const notes = row.notes || row.note || "";
-    const doctor = row.doctor || row["attending doctor"] || row["dr"] || "";
-    const diagnosis = row.diagnosis || row.dx || "";
+    const name = findCol(row, [
+      "name", "full name", "patient name", "patient",
+      "الاسم", "اسم المريض", "اسم", "مريض", "الاسم الكامل",
+    ]);
+    const civil = findCol(row, [
+      "civil", "civil id", "civilid", "id",
+      "الرقم المدني", "رقم مدني", "مدني", "الهوية",
+    ]);
+    const nat = findCol(row, [
+      "nat", "nationality", "nation",
+      "الجنسية", "جنسية",
+    ]);
+    const ward = findCol(row, [
+      "ward", "ward no", "ward number",
+      "جناح", "الجناح", "رقم الجناح",
+    ]);
+    const room = findCol(row, [
+      "room", "room no", "bed", "room / bed",
+      "غرفة", "الغرفة", "رقم الغرفة", "سرير", "السرير",
+    ]);
+    const code = parseInt(findCol(row, [
+      "code", "severity", "severity code",
+      "كود", "الشدة", "درجة الخطورة",
+    ]) || "2") || 2;
+    const notes = findCol(row, [
+      "notes", "note",
+      "ملاحظات", "ملاحظة",
+    ]);
+    const doctor = findCol(row, [
+      "doctor", "attending doctor", "dr",
+      "طبيب", "الطبيب", "دكتور", "الدكتور", "الطبيب المعالج",
+    ]);
+    const diagnosis = findCol(row, [
+      "diagnosis", "dx",
+      "تشخيص", "التشخيص",
+    ]);
     if (!name) continue;
     patients.push({
       name: name.slice(0, 200), civil: civil.slice(0, 20), nat: nat.slice(0, 50),
@@ -661,35 +749,41 @@ function parseStructuredSheet(lines) {
     const cols = parseCSVRow(lines[i]);
     const joined = cols.join(" ").trim().toLowerCase();
 
-    // Detect header row to map columns
-    if (joined.includes("patient name") || joined.includes("patient_name")) {
+    // Detect header row to map columns (English + Arabic)
+    if (joined.includes("patient name") || joined.includes("patient_name") || joined.includes("اسم المريض") || joined.includes("اسم")) {
       cols.forEach((c, j) => {
         const cl = c.toLowerCase().trim();
-        if (cl.includes("room") || cl.includes("bed") || (cl.includes("ward") && cl.includes("/"))) colRoom = j;
-        else if (cl.includes("patient")) colName = j;
-        else if (cl.includes("diagnosis") || cl === "dx") colDiagnosis = j;
-        else if (cl.includes("doctor") || cl === "dr") colDoctor = j;
-        else if (cl.includes("status")) colStatus = j;
+        if (cl.includes("room") || cl.includes("bed") || cl.includes("غرفة") || cl.includes("سرير") || (cl.includes("ward") && cl.includes("/"))) colRoom = j;
+        else if (cl.includes("patient") || cl.includes("مريض") || cl.includes("اسم")) colName = j;
+        else if (cl.includes("diagnosis") || cl === "dx" || cl.includes("تشخيص")) colDiagnosis = j;
+        else if (cl.includes("doctor") || cl === "dr" || cl.includes("طبيب") || cl.includes("دكتور")) colDoctor = j;
+        else if (cl.includes("status") || cl.includes("حالة") || cl.includes("الحالة")) colStatus = j;
       });
       continue;
     }
 
     // Detect section headers: "active" or "chronic" — strict matching to avoid false positives
-    // (e.g., diagnosis "chronic kidney disease" should not trigger a section change)
-    const trimmedJoined = joined.replace(/,/g, "").trim();
-    if (/^(active\s*(patients?|list)?|(?:male|female)\s+list\s*\(active\))$/i.test(trimmedJoined)) { currentCategory = "Active"; continue; }
-    if (/^(chronic\s*(patients?|list)?|(?:male|female)\s+list\s*\(chronic\))$/i.test(trimmedJoined)) { currentCategory = "Chronic"; continue; }
+    // Strip commas, parentheses, brackets for clean matching
+    const trimmedJoined = joined.replace(/[,\(\)\[\]]/g, "").trim();
+    if (/^(active\s*(patients?|list)?|(?:male|female)\s+list\s*active|active\s+list)$/i.test(trimmedJoined)) { currentCategory = "Active"; continue; }
+    if (/^(chronic\s*(patients?|list)?|(?:male|female)\s+list\s*chronic|chronic\s+list)$/i.test(trimmedJoined)) { currentCategory = "Chronic"; continue; }
+    // Arabic section headers: نشط/حاد (active), مزمن (chronic)
+    if (/^(نشط|حاد|مرضى نشطين|قائمة نشطة|مرضى حادين)$/.test(trimmedJoined)) { currentCategory = "Active"; continue; }
+    if (/^(مزمن|مرضى مزمنين|قائمة مزمنة)$/.test(trimmedJoined)) { currentCategory = "Chronic"; continue; }
 
-    // Detect ward header: "Ward 20", "ward 14", "ICU", "ER/Unassigned"
-    const wardMatch = joined.match(/^[\s,]*(ward\s*\d+|icu|nicu|ccu|hdu|opd|er[\/\w]*)/i);
+    // Detect ward header: "Ward 20", "جناح 20", "ICU", "ER/Unassigned"
+    const wardMatch = joined.match(/^[\s,]*(ward\s*\d+|جناح\s*\d+|icu|nicu|ccu|hdu|opd|er[\/\w]*|عناية\s*مركزة|طوارئ)/i);
     if (wardMatch) {
       // Check if this row ONLY has the ward header (no patient data)
       const nonEmpty = cols.filter(c => c.trim()).length;
       const wardText = wardMatch[1].trim();
       if (nonEmpty <= 2) {
-        // Extract ward number: "ward 20" -> "W20", "ICU" -> "ICU", "ER/Unassigned" -> "ER"
-        const wNum = wardText.match(/ward\s*(\d+)/i);
-        currentWard = wNum ? "W" + wNum[1] : wardText.toUpperCase().split("/")[0];
+        // Extract ward number: "ward 20"/"جناح 20" -> "W20", "ICU"/"عناية مركزة" -> "ICU", "ER"/"طوارئ" -> "ER"
+        const wNum = wardText.match(/(?:ward|جناح)\s*(\d+)/i);
+        if (wNum) { currentWard = "W" + wNum[1]; }
+        else if (wardText.includes("عناية") || /icu|nicu/i.test(wardText)) { currentWard = wardText.toUpperCase().includes("NICU") ? "NICU" : "ICU"; }
+        else if (wardText.includes("طوارئ") || /^er/i.test(wardText)) { currentWard = "ER"; }
+        else { currentWard = wardText.toUpperCase().split("/")[0]; }
         continue;
       }
     }
@@ -698,7 +792,7 @@ function parseStructuredSheet(lines) {
     const name = (cols[colName] || "").trim();
     if (!name) continue;
     // Skip if it looks like a header or section label
-    if (name.toLowerCase().includes("patient name") || name.toLowerCase().includes("list")) continue;
+    if (name.toLowerCase().includes("patient name") || name.toLowerCase().includes("list") || name.includes("اسم المريض") || name.includes("قائمة")) continue;
 
     const room = (cols[colRoom] || "").trim();
     const diagnosis = (cols[colDiagnosis] || "").trim();
@@ -803,16 +897,18 @@ async function doSyncUnit(unit, uidForAudit) {
 
   const prevSync = prevSync0;
 
-  let added = 0, updated = 0, discharged = 0, unchanged = 0;
+  let added = 0, discharged = 0, unchanged = 0;
   const newSyncState = {};
   const writes = {};
 
   // Deduplicate sheet patients: keep last occurrence per normalized key (most likely the updated version)
+  // Use toLatin + stripVowels for cross-script dedup (Arabic "هاراكامان" == English "Harakaman")
   const seenSheet = new Map();
   for (let i = 0; i < sheetPatients.length; i++) {
     const sp = sheetPatients[i];
     if (!sp.name || !sp.name.trim()) continue;
-    const dedupKey = normName(sp.name) + "|" + normWard(sp.ward) + "|" + normRoom(sp.room);
+    const latinName = stripVowels(toLatin(normName(sp.name)));
+    const dedupKey = latinName + "|" + normWard(sp.ward) + "|" + normRoom(sp.room);
     seenSheet.set(dedupKey, i);
   }
   const dedupedPatients = [...seenSheet.values()].sort((a, b) => a - b).map(i => sheetPatients[i]);
@@ -843,7 +939,7 @@ async function doSyncUnit(unit, uidForAudit) {
     spMatches.set(c.si, { key: c.key, pat: c.pat });
   }
 
-  // Process all sheet patients: matched ones get updated, unmatched get created
+  // Process all sheet patients: matched ones are left untouched, unmatched get added
   for (let si = 0; si < dedupedPatients.length; si++) {
     const sp = dedupedPatients[si];
     if (!sp.name || !sp.name.trim()) continue;
@@ -852,21 +948,11 @@ async function doSyncUnit(unit, uidForAudit) {
     const spId = match ? match.key : (normName(sp.name) + "|" + normWard(sp.ward) + "|" + normRoom(sp.room));
 
     if (match) {
+      // Existing patient — do NOT update their data (app edits take priority)
       newSyncState[spId] = match.key;
-      let changed = false;
-      const upd = { ...match.pat };
-      if (sp.ward && normWard(sp.ward) !== normWard(upd.ward)) { upd.ward = sp.ward; changed = true; }
-      if (sp.room && normRoom(sp.room) !== normRoom(upd.room || "")) { upd.room = sp.room; changed = true; }
-      if (sp.diagnosis && sp.diagnosis !== (upd.diagnosis || "")) { upd.diagnosis = sp.diagnosis; changed = true; }
-      if (sp.doctor && sp.doctor.toLowerCase() !== (upd.doctor || "").toLowerCase()) { upd.doctor = sp.doctor; changed = true; }
-      if (sp.code && sp.code !== upd.code) { upd.code = sp.code; changed = true; }
-      if (sp.notes && sp.notes !== (upd.notes || "")) { upd.notes = sp.notes; changed = true; }
-      if ((upd.category || "").toLowerCase() === "discharged") {
-        upd.category = sp.category || "Active"; changed = true;
-      }
-      if (changed) { upd.ts = Date.now(); writes["patients/" + unit + "/" + match.key] = upd; updated++; }
-      else { unchanged++; }
+      unchanged++;
     } else {
+      // New patient from sheet — add to database
       const newKey = db.ref("patients/" + unit).push().key;
       writes["patients/" + unit + "/" + newKey] = {
         name: sp.name.slice(0, 200), civil: (sp.civil || "").slice(0, 20),
@@ -898,14 +984,14 @@ async function doSyncUnit(unit, uidForAudit) {
   }
   await db.ref("config/sheetSync/" + unit).set(newSyncState);
 
-  if (added || updated || discharged) {
+  if (added || discharged) {
     await db.ref("audit").push({
       action: "sheet_sync", unit, ts: Date.now(), uid: uidForAudit || "auto",
-      detail: "+" + added + " ~" + updated + " -" + discharged + " =" + unchanged,
+      detail: "+" + added + " -" + discharged + " =" + unchanged,
     });
   }
 
-  return { added, updated, discharged, unchanged, total: sheetPatients.length };
+  return { added, updated: 0, discharged, unchanged, total: sheetPatients.length };
 }
 
 // Scheduled auto-sync: runs every 5 minutes, syncs all units with configured sheets
@@ -918,17 +1004,16 @@ exports.autoSyncSheets = functions.region("europe-west1").pubsub
     if (!sheets) { console.log("No sheets configured"); return null; }
 
     const units = Object.keys(sheets).filter(u => /^[A-E]_(M|F)$/.test(u) && sheets[u]);
-    let totalAdded = 0, totalUpdated = 0, totalDischarged = 0;
+    let totalAdded = 0, totalDischarged = 0;
 
     for (const unit of units) {
       try {
         const result = await doSyncUnit(unit, "auto");
         if (result) {
           totalAdded += result.added;
-          totalUpdated += result.updated;
           totalDischarged += result.discharged;
-          if (result.added || result.updated || result.discharged) {
-            console.log("Auto-sync " + unit + ": +" + result.added + " ~" + result.updated + " -" + result.discharged);
+          if (result.added || result.discharged) {
+            console.log("Auto-sync " + unit + ": +" + result.added + " -" + result.discharged);
           }
         }
       } catch (e) {
@@ -940,8 +1025,8 @@ exports.autoSyncSheets = functions.region("europe-west1").pubsub
       }
     }
 
-    if (totalAdded || totalUpdated || totalDischarged) {
-      console.log("Auto-sync complete: +" + totalAdded + " ~" + totalUpdated + " -" + totalDischarged);
+    if (totalAdded || totalDischarged) {
+      console.log("Auto-sync complete: +" + totalAdded + " -" + totalDischarged);
     }
     return null;
   });
