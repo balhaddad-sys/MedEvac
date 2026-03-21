@@ -459,22 +459,24 @@ const translit = {
   "abdullatif":"عبداللطيف","dalim":"دليم","muneer":"منير",
 };
 
-// Levenshtein edit distance
+// Levenshtein edit distance (single-row DP — O(n) space instead of O(m*n))
 function editDist(a, b) {
   if (!a) return (b || "").length;
   if (!b) return a.length;
   const m = a.length, n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
   for (let i = 1; i <= m; i++) {
+    curr[0] = i;
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1]);
     }
+    [prev, curr] = [curr, prev];
   }
-  return dp[m][n];
+  return prev[n];
 }
 
 // Similarity ratio: 0-1 (1 = identical)
@@ -516,10 +518,16 @@ function findMatch(sp, dbEntries, prevSync) {
     const dbFirstName = dbName.split(" ")[0];
     let score = 0;
 
+    // Signal 0: Civil ID exact match (unique national identifier — strongest possible signal)
+    if (sp.civil && pat.civil && sp.civil.trim() && pat.civil.trim() && sp.civil.trim() === pat.civil.trim()) { score += 150; }
+
     // Signal 1: Exact normalized name match (strongest)
     if (spName && dbName && spName === dbName) { score += 100; }
-    // Signal 2: Ward + Room match (very strong — a bed has one patient)
-    else if (spWard && spRoom && dbWard && dbRoom && spWard === dbWard && spRoom === dbRoom) { score += 90; }
+    // Signal 2: Ward + Room match — only strong if there's also partial name evidence
+    else if (spWard && spRoom && dbWard && dbRoom && spWard === dbWard && spRoom === dbRoom) {
+      const nameOverlap = spFirstName && dbFirstName && firstNameMatch(spFirstName, dbFirstName);
+      score += nameOverlap ? 90 : 40; // 40 alone won't reach threshold of 50
+    }
     // Signal 3: One name contains the other (partial match)
     else if (spName && dbName && (dbName.includes(spName) || spName.includes(dbName))) { score += 70; }
     // Signal 4: Fuzzy full-name similarity (handles typos, transliteration variants)
@@ -657,7 +665,7 @@ function parseStructuredSheet(lines) {
     if (joined.includes("patient name") || joined.includes("patient_name")) {
       cols.forEach((c, j) => {
         const cl = c.toLowerCase().trim();
-        if (cl.includes("room") || cl.includes("ward") && cl.includes("/")) colRoom = j;
+        if (cl.includes("room") || cl.includes("bed") || (cl.includes("ward") && cl.includes("/"))) colRoom = j;
         else if (cl.includes("patient")) colName = j;
         else if (cl.includes("diagnosis") || cl === "dx") colDiagnosis = j;
         else if (cl.includes("doctor") || cl === "dr") colDoctor = j;
@@ -666,12 +674,14 @@ function parseStructuredSheet(lines) {
       continue;
     }
 
-    // Detect section: "active" or "chronic"
-    if (joined.includes("active")) { currentCategory = "Active"; continue; }
-    if (joined.includes("chronic")) { currentCategory = "Chronic"; continue; }
+    // Detect section headers: "active" or "chronic" — strict matching to avoid false positives
+    // (e.g., diagnosis "chronic kidney disease" should not trigger a section change)
+    const trimmedJoined = joined.replace(/,/g, "").trim();
+    if (/^(active\s*(patients?|list)?|(?:male|female)\s+list\s*\(active\))$/i.test(trimmedJoined)) { currentCategory = "Active"; continue; }
+    if (/^(chronic\s*(patients?|list)?|(?:male|female)\s+list\s*\(chronic\))$/i.test(trimmedJoined)) { currentCategory = "Chronic"; continue; }
 
     // Detect ward header: "Ward 20", "ward 14", "ICU", "ER/Unassigned"
-    const wardMatch = joined.match(/^[\s,]*(ward\s*\d+|icu|er[\/\w]*)/i);
+    const wardMatch = joined.match(/^[\s,]*(ward\s*\d+|icu|nicu|ccu|hdu|opd|er[\/\w]*)/i);
     if (wardMatch) {
       // Check if this row ONLY has the ward header (no patient data)
       const nonEmpty = cols.filter(c => c.trim()).length;
@@ -758,30 +768,90 @@ async function doSyncUnit(unit, uidForAudit) {
   const gid = gidMatch ? gidMatch[1] : "0";
   const csvUrl = "https://docs.google.com/spreadsheets/d/" + sheetId + "/export?format=csv&gid=" + gid;
 
-  const res = await fetch(csvUrl);
-  if (!res.ok) throw new Error("Failed to fetch sheet for " + unit);
+  // Fetch with retry for transient errors (429 rate limit, 5xx server errors)
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await fetch(csvUrl);
+    if (res.ok) break;
+    if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      continue;
+    }
+    throw new Error("Failed to fetch sheet for " + unit + ": HTTP " + res.status);
+  }
   const csv = await res.text();
+
+  // Safety: detect HTML responses (login page, deleted sheet, error page)
+  if (csv.trim().startsWith("<!") || csv.trim().startsWith("<html")) {
+    throw new Error("Sheet returned HTML instead of CSV for " + unit + " — check sharing permissions");
+  }
+
   const sheetPatients = parseSheetCSV(csv);
+
+  // Safety: if sheet returns 0 patients but we had patients before, skip to prevent mass discharge
+  const syncSnap0 = await db.ref("config/sheetSync/" + unit).once("value");
+  const prevSync0 = syncSnap0.val() || {};
+  if (sheetPatients.length === 0 && Object.keys(prevSync0).length > 0) {
+    console.warn("Sheet returned 0 patients for " + unit + " but had " + Object.keys(prevSync0).length + " previously — skipping sync");
+    return { added: 0, updated: 0, discharged: 0, unchanged: 0, total: 0, skipped: true, reason: "empty_sheet_safety" };
+  }
 
   const dbSnap = await db.ref("patients/" + unit).once("value");
   const dbData = dbSnap.val() || {};
-  const dbEntries = Object.entries(dbData);
+  // Filter out discharged patients from matching pool to prevent false matches and performance drag
+  const dbEntries = Object.entries(dbData).filter(([, p]) => (p.category || "").toLowerCase() !== "discharged");
 
-  const syncSnap = await db.ref("config/sheetSync/" + unit).once("value");
-  const prevSync = syncSnap.val() || {};
+  const prevSync = prevSync0;
 
   let added = 0, updated = 0, discharged = 0, unchanged = 0;
   const newSyncState = {};
   const writes = {};
-  const matchedDbKeys = new Set();
 
-  for (const sp of sheetPatients) {
+  // Deduplicate sheet patients: keep last occurrence per normalized key (most likely the updated version)
+  const seenSheet = new Map();
+  for (let i = 0; i < sheetPatients.length; i++) {
+    const sp = sheetPatients[i];
     if (!sp.name || !sp.name.trim()) continue;
-    const spId = normName(sp.name) + "|" + normWard(sp.ward) + "|" + normRoom(sp.room);
-    const match = findMatch(sp, dbEntries.filter(([k]) => !matchedDbKeys.has(k)), prevSync);
+    const dedupKey = normName(sp.name) + "|" + normWard(sp.ward) + "|" + normRoom(sp.room);
+    seenSheet.set(dedupKey, i);
+  }
+  const dedupedPatients = [...seenSheet.values()].sort((a, b) => a - b).map(i => sheetPatients[i]);
+
+  // Score-ranked matching: compute all match candidates, assign by highest score first
+  // This prevents order-dependent mismatches where an earlier row steals a better match
+  const candidates = [];
+  for (let si = 0; si < dedupedPatients.length; si++) {
+    const sp = dedupedPatients[si];
+    if (!sp.name || !sp.name.trim()) continue;
+    for (const [key, pat] of dbEntries) {
+      const matchResult = findMatch(sp, [[key, pat]], prevSync);
+      if (matchResult) {
+        candidates.push({ si, sp, key, pat, score: matchResult.score });
+      }
+    }
+  }
+  candidates.sort((a, b) => b.score - a.score);
+
+  const matchedDbKeys = new Set();
+  const matchedSpIdxs = new Set();
+  const spMatches = new Map(); // si -> { key, pat }
+
+  for (const c of candidates) {
+    if (matchedDbKeys.has(c.key) || matchedSpIdxs.has(c.si)) continue;
+    matchedDbKeys.add(c.key);
+    matchedSpIdxs.add(c.si);
+    spMatches.set(c.si, { key: c.key, pat: c.pat });
+  }
+
+  // Process all sheet patients: matched ones get updated, unmatched get created
+  for (let si = 0; si < dedupedPatients.length; si++) {
+    const sp = dedupedPatients[si];
+    if (!sp.name || !sp.name.trim()) continue;
+    const match = spMatches.get(si);
+    // Use DB key as sync state ID once matched (stable), fallback to composite key
+    const spId = match ? match.key : (normName(sp.name) + "|" + normWard(sp.ward) + "|" + normRoom(sp.room));
 
     if (match) {
-      matchedDbKeys.add(match.key);
       newSyncState[spId] = match.key;
       let changed = false;
       const upd = { ...match.pat };
@@ -822,7 +892,10 @@ async function doSyncUnit(unit, uidForAudit) {
     }
   }
 
-  for (const [path, val] of Object.entries(writes)) { await db.ref(path).set(val); }
+  // Atomic multi-path write: faster, all-or-nothing, reduces Firebase billing
+  if (Object.keys(writes).length > 0) {
+    await db.ref().update(writes);
+  }
   await db.ref("config/sheetSync/" + unit).set(newSyncState);
 
   if (added || updated || discharged) {
@@ -860,6 +933,10 @@ exports.autoSyncSheets = functions.region("europe-west1").pubsub
         }
       } catch (e) {
         console.error("Auto-sync failed for " + unit + ":", e.message);
+        await db.ref("config/sheetErrors/" + unit).set({
+          error: (e.message || "unknown").slice(0, 500),
+          ts: Date.now(),
+        }).catch(() => {});
       }
     }
 
